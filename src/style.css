@@ -1,0 +1,89 @@
+:root {
+  font-family: 'M PLUS 1p', sans-serif;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+
+  color: #0f0f0f;
+  background-color: #f6f6f6;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+
+  margin: 0 20px;
+}
+
+body {
+  user-select: none;
+  cursor: default;
+}
+
+p {
+  text-align: left;
+}
+
+.tab {
+  margin-bottom: 20px;
+}
+
+.console {
+  border: 1px solid #888;
+  color: #fff;
+  background: #000;
+  padding: 5px 10px;
+  text-align: left;
+  overflow-y: scroll;
+  min-height: 60vh;
+  max-height: 60vh;
+  word-wrap: break-word;
+  user-select: text;
+}
+
+.console ul {
+  margin: 0;
+  padding: 0;
+}
+
+.console li:before {
+  content: "> ";
+}
+
+.console li {
+  list-style: none;
+}
+
+.chart {
+  width: 100vw;
+  height: 100vh;
+}
+
+.mdc-dialog__container {
+  width: 100%;
+}
+
+.mdc-dialog .mdc-dialog__surface {
+  width: 90vw;
+  max-Width: 100%;
+}
+
+.mdc-data-table {
+  height: 65vh;
+}
+
+@media (min-width: 592px)
+.mdc-dialog .mdc-dialog__surface {
+    max-width: 560px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    filter: invert(1) hue-rotate(120deg);
+  }
+  
+  img, .console, .console *, canvas, canvas * {
+    filter: invert(1) hue-rotate(240deg);
+  }
+}
