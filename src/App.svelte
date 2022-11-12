@@ -3,7 +3,7 @@
 </script>
 
 <main class="container">
-  <h1>umalog</h1>
+  <h1>UmaUmaLogger</h1>
 
   <div class="row">
     <Filelogging />

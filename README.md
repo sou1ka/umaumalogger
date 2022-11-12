@@ -1,4 +1,4 @@
-# umalog-gui
+# UmaUmalogger うまうまロガー
 - version 0.1.1.20221112
 
 DMM版「ウマ娘　プリティダービー」の育成内容を保存します。
@@ -19,13 +19,13 @@ OCRとフォントの都合で、3を8、8を3に間違える場合、連続す�
 
 ## ソフト構成
 
-umalog-gui
-	┣umalog-gui.exe	アプリ本体
-	┣umalog.exe		ロギング処理本体
-	┣umalog-cui.exe	CUI版
-	┣bin			OCR処理バイナリ
-	┣out			ログ出力フォルダ
-	┗temp			OCR処理一時フォルダ
+umaumalogger
+	UmaUmaLogger.exe	アプリ本体
+	┣umalog.exe			ロギング処理本体
+	┣umalog-cui.exe		CUI版
+	┣bin				OCR処理バイナリ
+	┣out				ログ出力フォルダ
+	┗temp				OCR処理一時フォルダ
 
 構成を変えると動かなくなるので、変更しないでください。
 
@@ -43,12 +43,15 @@ umalog-gui
 
 ## アンインストール
 
-レジストリ等は使っていませんので、umalog-gui ごと削除してください。
+レジストリ等は使っていませんので、umaumaloger フォルダごと削除してください。
 
 -----------------------------------------------------------------------------
 
 一部の OCR 処理に Tesseract OCR v3系のバイナリを使用しています。
 https://sourceforge.net/projects/tesseract-js.mirror/files/v3.0.2/
+
+グラフ表示に Chartjs を使用しています。
+https://www.scichart.com/javascript-chart/
 
 -----------------------------------------------------------------------------
 
