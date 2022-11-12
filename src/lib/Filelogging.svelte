@@ -18,12 +18,16 @@
 
   let loggingMsg = ["Start をクリックするとロギングを開始します"];
   let now = new Date();
-  let filename = String(now.getFullYear()) + String(now.getMonth()+1) + String(now.getDate()) + String(now.getHours()) + String(now.getMinutes()) + String(now.getSeconds()) + ".tsv"
-  let stdoutfilename = filename + ".stdout.log";
+  let filename = String(now.getFullYear()) + String(now.getMonth()+1).padStart(2, '0') + String(now.getDate()).padStart(2, '0') + String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0') + String(now.getSeconds()).padStart(2, '0') + ".tsv"
   let process = null;
   let iid = null;
+  let logno = "0";
+  let active = "Console";
+  let items = [];
 
   function addMsg(m) {
+    if(m == '') { return; }
+
     let tmp = loggingMsg.concat();
     tmp.push(m);
     loggingMsg = tmp;
@@ -44,22 +48,31 @@
     process = await cmd.spawn();
     addMsg("ロギングを開始しました。プロセスは " + process.pid + " です");
 
-    iid = setInterval(get_stdoutfile, 1000);
+    get_loglists(true);
+    iid = setInterval(get_stdoutfile, 2000);
   }
 
   async function get_stdoutfile() {
     let runtime = (new Date().getTime() + 11644473600000) * 10000;
     let ret = await invoke("get_filelog_lastline", {
+      lognoStr: String(logno),
       runtimeStr: String(runtime), 
       filename: filename
     });
 
     if(ret) {
-      addMsg(ret.replace("\t", ", "));
+      let parse = ret.split("\n");
+      if(parse.length > 0) {
+        logno = String(parse[0]);
+
+        for(let i = 1, size = parse.length; i < size; i++) {
+          addMsg(parse[i].replace("\t", ", "));
+        }
+      }
     }
   }
 
-  async function stopLog() {
+  async function stopLog(silent) {
     clearInterval(iid);
     iid = null;
 
@@ -68,10 +81,17 @@
     let cmd = new Command('taskkill', ["/im", "umalog.exe", "/f"]);
     process = await cmd.spawn();
     process = false;
+    
+    if(silent == true ) { return; }
+
     addMsg("ロギングを停止しました");
   }
+  stopLog(true);
 
-  async function get_loglists() {
+  async function get_loglists(force) {
+    if(active != 'List' && force !== true) { return; }
+
+    items = [];
     let ret = await invoke("get_loglists");
     let lists = JSON.parse(ret);
     
@@ -81,17 +101,14 @@
       let dt = new Date(lists[i].create_timestamp * 1000);
       let line = {
         filename: lists[i].filename,
-        create_date: dt.getFullYear() + '/' + (dt.getMonth()+1) + '/' + dt.getDate() + ' ' + dt.getHours() + ':' + dt.getMinutes()
+        create_date: dt.getFullYear() + '/' + String((dt.getMonth()+1)).padStart(2, '0') + '/' + String(dt.getDate()).padStart(2, '0') + ' ' + String(dt.getHours()).padStart(2, '0') + ':' + String(dt.getMinutes()).padStart(2, '0')
       };
       items.push(line);
     }
   }
-  get_loglists();
+  get_loglists(true);
 
   // app setting
-  let active = "Console";
-
-  let items = [];
   let sort = 'create_date';
   let sortDirection = 'ascending';
   function handleSort() {
@@ -224,7 +241,7 @@
 
 <div class="tab">
   <TabBar tabs={['Console', 'List']} let:tab bind:active>
-    <Tab {tab} minWidth>
+    <Tab {tab} minWidth on:click={get_loglists}>
       <Label>{tab}</Label>
     </Tab>
   </TabBar>
@@ -272,6 +289,7 @@
 {:else if active === 'List'}
 
 <div>
+  <!--
   <Wrapper>
     <Button on:click={get_loglists} variant="raised">
       <Icon class="material-icons">refresh</Icon>
@@ -279,6 +297,7 @@
     </Button>
     <Tooltip>ログをリロードします</Tooltip>
   </Wrapper>
+  -->
   <hr />
   <DataTable
     sortable
