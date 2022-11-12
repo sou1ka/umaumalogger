@@ -54,7 +54,7 @@ https://sourceforge.net/projects/tesseract-js.mirror/files/v3.0.2/
 https://www.scichart.com/javascript-chart/
 
 アイコンは ICOOON MONO を使わせてもらっています。
-https://icooon-mono.com/13481-%E8%B9%84%E9%89%84%E3%82%A2%E3%82%A4%E3%82%B3%E3%83%B31/
+https://icooon-mono.com/
 
 -----------------------------------------------------------------------------
 
