@@ -53,10 +53,8 @@
   }
 
   async function get_stdoutfile() {
-    let runtime = (new Date().getTime() + 11644473600000) * 10000;
     let ret = await invoke("get_filelog_lastline", {
       lognoStr: String(logno),
-      runtimeStr: String(runtime), 
       filename: filename
     });
 

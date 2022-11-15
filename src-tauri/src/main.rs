@@ -17,29 +17,19 @@ fn filelogging(filename: &str) -> String {
 }
 
 #[tauri::command]
-fn get_filelog_lastline(logno_str: &str, runtime_str: &str, filename: &str) -> String {
+fn get_filelog_lastline(logno_str: &str, filename: &str) -> String {
     let path = &format!("{}\\out\\{}", get_currentpath(), filename);
-    let meta = fs::metadata(path).unwrap();
-    let lastmodify: u64 = meta.last_write_time();
-    let runtime: u64 = runtime_str.parse().unwrap();
     let mut ret = String::from("");
-//println!("file {}, runtime {}, lastmodify {}", path, runtime, lastmodify);
-    if lastmodify > runtime {
-        let dat = fs::read_to_string(path).unwrap();
-        let dats:Vec<&str> = dat.trim().split("\n").collect();
-        ret = dats[dats.len()-1].to_string();//println!("{}", ret);
-    } else {
-        let dat = fs::read_to_string(path).unwrap();
-        let dats:Vec<&str> = dat.trim().split("\n").collect();
-        let linecount = dats.len();
-        let logno:usize = logno_str.parse().unwrap();//println!("linecount {}, logno {}", linecount, logno);
-        ret += &linecount.to_string();
-        ret += "\n";
-        if logno < linecount {
-            for n in logno..linecount {
-                ret += &dats[n].to_string();
-                ret += "\n";
-            }
+    let dat = fs::read_to_string(path).expect("not read file.");
+    let dats:Vec<&str> = dat.trim().lines().collect();
+    let linecount = dats.len();
+    let logno:usize = logno_str.parse().unwrap();//println!("linecount {}, logno {}", linecount, logno);
+    ret += &linecount.to_string();
+    ret += "\n";
+    if logno < linecount {
+        for n in logno..linecount {
+            ret += &dats[n].to_string();
+            ret += "\n";
         }
     }
 
