@@ -8,17 +8,13 @@
   },
   "package": {
     "productName": "UmaUmaLogger",
-    "version": "0.1.2"
+    "version": "0.2.0"
   },
   "tauri": {
     "allowlist": {
       "all": true,
       "path": {
         "all": true
-      },
-      "fs": {
-        "readFile": true,
-        "writeFile": true
       },
       "shell": {
         "all": true,
@@ -32,6 +28,10 @@
         }, {
           "name": "taskkill",
           "cmd": "taskkill",
+          "args": true
+        }, {
+          "name": "view",
+          "cmd": "cmd",
           "args": true
         }]
       }

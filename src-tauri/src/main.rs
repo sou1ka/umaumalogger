@@ -9,6 +9,7 @@ use std::fs;
 use std::os::windows::fs::MetadataExt;
 use std::path::Path;
 use std::collections::HashMap;
+use chrono::Utc;
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
@@ -66,6 +67,41 @@ fn get_filelog(filename: &str) -> String {
     format!("{}", dat)
 }
 
+#[tauri::command]
+fn take_screenshot() -> String {
+    let device = dxcapture::Device::new_from_window("umamusume".to_string());
+
+    match device {
+        Ok(d) => {
+        //    let d = dxcapture::Device::new_from_window("umamusume".to_string()).expect("There is no 'umamusume' window.");
+            let capture = dxcapture::Capture::new(&d).unwrap();
+            let image = capture.wait_img_frame().expect("Failed to capture");
+            let now = Utc::now().format("%Y%m%d%H%M%S%Z").to_string();
+            let path = &format!("{}\\screenshot\\{}.png", get_currentpath(), now);
+            let out = image.data.save(path);
+
+            match out {
+                Ok(o) => {
+                    format!("{}.png", now)
+                },
+                Err(e) => {
+                    format!("{}", e)
+                }
+            }
+           
+        },
+        Err(e) => format!("There is no 'umamusume' window.")
+    }    
+}
+
+#[tauri::command]
+fn get_imagelist() -> String {
+    let path = &format!("{}\\screenshot\\", get_currentpath());
+    let lists: Vec<String> = read_dir(path).unwrap();
+    let serialized: String = serde_json::to_string(&lists).unwrap();
+    format!("{}", serialized)
+}
+
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
@@ -73,7 +109,9 @@ fn main() {
             get_filelog_lastline,
             get_path,
             get_loglists,
-            get_filelog
+            get_filelog,
+            take_screenshot,
+            get_imagelist
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

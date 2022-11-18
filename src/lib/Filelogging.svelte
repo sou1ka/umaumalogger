@@ -15,6 +15,14 @@
   } from '@smui/data-table';
   import IconButton from '@smui/icon-button';
   import Dialog, { Header, Title, Content } from '@smui/dialog';
+  import Snackbar, { Actions } from '@smui/snackbar';
+  import ImageList, {
+    Item,
+    ImageAspectContainer,
+    Image,
+    Supporting,
+  } from '@smui/image-list';
+  import LayoutGrid from '@smui/layout-grid';
 
   let loggingMsg = ["Start をクリックするとロギングを開始します"];
   let now = new Date();
@@ -105,6 +113,37 @@
     }
   }
   get_loglists(true);
+
+  let snackbar;
+  let snackbartext;
+  async function take_screenshot() {
+    let ret = await invoke("take_screenshot");
+
+    if(ret == "There is no 'umamusume' window.") {
+      snackbartext = "ウマ娘が起動していません。";
+    } else {
+      snackbartext = ret + " に保存しました。";
+    }
+    
+    snackbar.open();
+    get_imagelist();
+  }
+
+  async function imageview(img) {
+    let path = await invoke("get_path");
+    let cmd = new Command('view', ["/c", "start", path + "\\screenshot\\" + img]);
+    console.log(cmd);
+    cmd.spawn();
+  }
+
+  let imagelist = [];
+  async function get_imagelist() {
+    imagelist = [];
+    let ret = await invoke("get_imagelist");
+    imagelist = JSON.parse(ret);
+    console.log(imagelist);
+  }
+  get_imagelist();
 
   // app setting
   let sort = 'create_date';
@@ -238,7 +277,7 @@
 </script>
 
 <div class="tab">
-  <TabBar tabs={['Console', 'List']} let:tab bind:active>
+  <TabBar tabs={['Console', 'List', 'Screenshot']} let:tab bind:active>
     <Tab {tab} minWidth on:click={get_loglists}>
       <Label>{tab}</Label>
     </Tab>
@@ -330,6 +369,22 @@
   </DataTable>
 
 </div>
+{:else if active === 'Screenshot'}
+  <Wrapper>
+    <Button on:click={take_screenshot} variant="raised">
+      <Icon class="material-icons">screenshot</Icon>
+      <Label>Capture</Label>
+    </Button>
+    <Tooltip>スクリーンショットを撮ります</Tooltip>
+  </Wrapper>
+  <hr />
+  <LayoutGrid>
+    {#each imagelist as img, i}
+      <Cell on:click={imageview(img)}>
+        <div class="demo-cell"><img src=".\screenshot\{img}" width="90" /></div>
+      </Cell>
+    {/each}
+  </LayoutGrid>
 {/if}
 
 <Dialog bind:open sheet aria-describedby="sheet-content">
@@ -338,3 +393,11 @@
     <canvas class="chart" id="chart_ikusei"></canvas>
   </Content>
 </Dialog>
+
+
+<Snackbar bind:this={snackbar} labelText={snackbartext}>
+  <Label />
+  <Actions>
+    <IconButton class="material-icons" title="Dismiss">close</IconButton>
+  </Actions>
+</Snackbar>

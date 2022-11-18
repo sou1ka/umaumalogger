@@ -24,6 +24,9 @@ dist-ssr
 *.sw?
 
 src-tauri/target/*
+src-tauri/out/
+src-tauri/screenshot/
 out
 bin
 temp
+screenshot

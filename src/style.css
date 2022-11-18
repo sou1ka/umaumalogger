@@ -73,6 +73,18 @@ p {
   height: 65vh;
 }
 
+.mdc-layout-grid__inner {
+  display: flex;
+}
+
+.demo-cell {
+  width: 90px;
+  height: 70px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 @media (min-width: 592px)
 .mdc-dialog .mdc-dialog__surface {
     max-width: 560px;
