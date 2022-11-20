@@ -10,6 +10,9 @@ use std::os::windows::fs::MetadataExt;
 use std::path::Path;
 use std::collections::HashMap;
 use chrono::Utc;
+use image::imageops::FilterType;
+use image::ImageOutputFormat;
+use std::io::Cursor;
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
@@ -76,7 +79,7 @@ fn take_screenshot() -> String {
         //    let d = dxcapture::Device::new_from_window("umamusume".to_string()).expect("There is no 'umamusume' window.");
             let capture = dxcapture::Capture::new(&d).unwrap();
             let image = capture.wait_img_frame().expect("Failed to capture");
-            let now = Utc::now().format("%Y%m%d%H%M%S%Z").to_string();
+            let now = Utc::now().format("%Y%m%d%H%M%S").to_string();
             let path = &format!("{}\\screenshot\\{}.png", get_currentpath(), now);
             let out = image.data.save(path);
 
@@ -96,10 +99,19 @@ fn take_screenshot() -> String {
 
 #[tauri::command]
 fn get_imagelist() -> String {
-    let path = &format!("{}\\screenshot\\", get_currentpath());
+    let path: &str = &format!("{}\\screenshot\\", get_currentpath());
     let lists: Vec<String> = read_dir(path).unwrap();
-    let serialized: String = serde_json::to_string(&lists).unwrap();
-    format!("{}", serialized)
+    let mut arr: Vec<String> = Vec::new();
+
+    for item in lists {
+        let mut line: HashMap<&str, String> = HashMap::new();
+        line.insert("filename", (&item).to_string());
+        line.insert("base64", get_imgbase64(&format!("{}{}", &path, &item)));
+        let serialized: String = serde_json::to_string(&line).unwrap();
+        arr.push(serialized);
+    }
+
+    format!("[{}]", arr.join(","))
 }
 
 fn main() {
@@ -134,4 +146,17 @@ fn get_currentpath() -> String {
     let cd = env::current_dir().unwrap();
 
     return cd.to_string_lossy().to_string();
+}
+
+fn get_imgbase64(path: &str) -> String {
+    let img = image::open(&path).expect(&path);
+    let nwidth: u32 = 90; // thumbnail width
+    let nheight: u32 = img.height();
+
+    let resized_img = img.resize(nwidth, nheight, FilterType::Lanczos3);
+    let mut buf: Vec<u8> = Vec::new();
+    resized_img.write_to(&mut Cursor::new(&mut buf), ImageOutputFormat::Png).unwrap();
+    let res_base64 = base64::encode(buf);
+    
+    return format!("data:image/png;base64,{}", res_base64);
 }

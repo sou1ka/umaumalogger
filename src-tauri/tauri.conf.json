@@ -33,6 +33,10 @@
           "name": "view",
           "cmd": "cmd",
           "args": true
+        }, {
+          "name": "capture",
+          "cmd": "dxcapture.exe",
+          "args": true
         }]
       }
     },

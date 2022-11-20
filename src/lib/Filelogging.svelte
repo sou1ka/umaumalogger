@@ -114,36 +114,34 @@
   }
   get_loglists(true);
 
-  let snackbar;
-  let snackbartext;
   async function take_screenshot() {
-    let ret = await invoke("take_screenshot");
+    let now = new Date();
+    let filename = String(now.getFullYear()) + String(now.getMonth()+1).padStart(2, '0') + String(now.getDate()).padStart(2, '0') + String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0') + String(now.getSeconds()).padStart(2, '0') + ".png"
+    let path = await invoke("get_path");
+    let cmd = new Command('capture', ["umamusume", path + "\\screenshot\\" + filename]);
+    cmd.spawn();
 
-    if(ret == "There is no 'umamusume' window.") {
-      snackbartext = "ウマ娘が起動していません。";
-    } else {
-      snackbartext = ret + " に保存しました。";
-    }
-    
-    snackbar.open();
     get_imagelist();
   }
 
   async function imageview(img) {
     let path = await invoke("get_path");
     let cmd = new Command('view', ["/c", "start", path + "\\screenshot\\" + img]);
-    console.log(cmd);
     cmd.spawn();
   }
 
   let imagelist = [];
-  async function get_imagelist() {
-    imagelist = [];
+  async function get_imagelist(force) {
+    if(force) { imagelist = []; }
     let ret = await invoke("get_imagelist");
-    imagelist = JSON.parse(ret);
-    console.log(imagelist);
+
+    if(force) {
+      imagelist = JSON.parse(ret);
+    } else if(imagelist.length < ret.length && ret[ret.length-1]) {
+      imagelist.push(ret[ret.length-1]);
+    }
   }
-  get_imagelist();
+  get_imagelist(true);
 
   // app setting
   let sort = 'create_date';
@@ -380,8 +378,8 @@
   <hr />
   <LayoutGrid>
     {#each imagelist as img, i}
-      <Cell on:click={imageview(img)}>
-        <div class="demo-cell"><img src=".\screenshot\{img}" width="90" /></div>
+      <Cell on:click={imageview(img.filename)}>
+        <div class="demo-cell"><img src="{img.base64}" width="90" /></div>
       </Cell>
     {/each}
   </LayoutGrid>
@@ -393,11 +391,3 @@
     <canvas class="chart" id="chart_ikusei"></canvas>
   </Content>
 </Dialog>
-
-
-<Snackbar bind:this={snackbar} labelText={snackbartext}>
-  <Label />
-  <Actions>
-    <IconButton class="material-icons" title="Dismiss">close</IconButton>
-  </Actions>
-</Snackbar>
