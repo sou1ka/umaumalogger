@@ -1,5 +1,5 @@
 UmaUmaLogger うまうまロガー
-- version 0.2.0.20221118
+- version 0.2.4.20221123
 
 DMM版「ウマ娘　プリティダービー」の育成内容を保存します。
 育成中のスピード、スタミナ、パワー、根性、賢さ、スキルPtを、画像認識（OCR）して数値を取得します。
@@ -23,6 +23,7 @@ umaumalogger
 	┣umaumalogger.exe	アプリ本体
 	┣umalog.exe			ロギング処理本体
 	┣umalog-cui.exe		CUI版
+	┣dxcapture.exe		スクリーンショット撮影バイナリ
 	┣bin				OCR処理バイナリ
 	┣out				ログ出力フォルダ
 	┣screenshot			スクリーンショット保存フォルダ

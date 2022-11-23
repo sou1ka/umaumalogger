@@ -85,6 +85,13 @@ p {
   align-items: center;
 }
 
+.screenshots {
+  padding: 5px 10px;
+  overflow-y: scroll;
+  min-height: 60vh;
+  max-height: 60vh;
+}
+
 @media (min-width: 592px)
 .mdc-dialog .mdc-dialog__surface {
     max-width: 560px;

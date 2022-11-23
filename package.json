@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "@tauri-apps/api": "^1.1.0",
-    "svelte-material-ui": "^7.0.0-beta.0"
+    "svelte-material-ui": "^7.0.0-beta.0",
+    "svelte-waypoint": "^0.1.4"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^1.0.1",

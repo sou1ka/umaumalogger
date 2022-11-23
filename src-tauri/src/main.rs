@@ -3,6 +3,9 @@
     windows_subsystem = "windows"
 )]
 
+use tauri::api::dialog;
+use tauri::{CustomMenuItem, Menu, MenuItem, Submenu};
+
 use std::env;
 use std::io;
 use std::fs;
@@ -106,7 +109,7 @@ fn get_imagelist() -> String {
     for item in lists {
         let mut line: HashMap<&str, String> = HashMap::new();
         line.insert("filename", (&item).to_string());
-        line.insert("base64", get_imgbase64(&format!("{}{}", &path, &item)));
+//        line.insert("base64", get_imgbase64(&format!("{}{}", &path, &item)));
         let serialized: String = serde_json::to_string(&line).unwrap();
         arr.push(serialized);
     }
@@ -115,6 +118,13 @@ fn get_imagelist() -> String {
 }
 
 fn main() {
+    let exit = CustomMenuItem::new("exit".to_string(), "Exit");
+    let version = CustomMenuItem::new("vers".to_string(), "Version");
+    let filemenu = Submenu::new("File", Menu::new().add_item(exit));
+    let helpmenu = Submenu::new("Help", Menu::new().add_item(version));
+    let menu = Menu::new()
+        .add_submenu(filemenu)
+        .add_submenu(helpmenu);
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             filelogging,
@@ -125,6 +135,18 @@ fn main() {
             take_screenshot,
             get_imagelist
         ])
+        .menu(menu)
+        .on_menu_event(|event| {
+            match event.menu_item_id() {
+                "exit" => {
+                    std::process::exit(0);
+                }
+                "vers" => {
+                    dialog::message(Some(&event.window()), "UmaUmaLogger", "Version 0.2.4.20221123\n\rAuthor: sou1ka @sou1ka");
+                }
+                _ => {}
+            }
+          })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

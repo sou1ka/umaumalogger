@@ -1,6 +1,8 @@
 <script>
   import { invoke } from "@tauri-apps/api/tauri"
   import { Command } from '@tauri-apps/api/shell'
+  import { convertFileSrc } from '@tauri-apps/api/tauri';
+
   import Button, { Group, Label, Icon } from '@smui/button';
   import Textfield from '@smui/textfield';
   import Tooltip, { Wrapper } from '@smui/tooltip';
@@ -23,6 +25,13 @@
     Supporting,
   } from '@smui/image-list';
   import LayoutGrid from '@smui/layout-grid';
+
+  import { WebviewWindow } from '@tauri-apps/api/window';
+  function viewWindow() {
+    new WebviewWindow('my-label', {
+      url: 'src/version.html'
+    });
+  }
 
   let loggingMsg = ["Start をクリックするとロギングを開始します"];
   let now = new Date();
@@ -114,6 +123,7 @@
   }
   get_loglists(true);
 
+  let scid;
   async function take_screenshot() {
     let now = new Date();
     let filename = String(now.getFullYear()) + String(now.getMonth()+1).padStart(2, '0') + String(now.getDate()).padStart(2, '0') + String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0') + String(now.getSeconds()).padStart(2, '0') + ".png"
@@ -121,7 +131,7 @@
     let cmd = new Command('capture', ["umamusume", path + "\\screenshot\\" + filename]);
     cmd.spawn();
 
-    get_imagelist();
+    scid = setTimeout(get_imagelist, 5000);
   }
 
   async function imageview(img) {
@@ -132,16 +142,26 @@
 
   let imagelist = [];
   async function get_imagelist(force) {
-    if(force) { imagelist = []; }
+    //if(force) { imagelist = []; }
     let ret = await invoke("get_imagelist");
+    let images = JSON.parse(ret);
 
-    if(force) {
-      imagelist = JSON.parse(ret);
-    } else if(imagelist.length < ret.length && ret[ret.length-1]) {
-      imagelist.push(ret[ret.length-1]);
+    if(true) {
+      imagelist = [];
+      imagelist = images;
+    } else if(imagelist.length < images.length) {
+      imagelist.push(images[images.length-1]);
     }
+
+    clearTimeout(scid);
   }
   get_imagelist(true);
+
+  async function show_screenshotdir() {
+    let path = await invoke("get_path");
+    let cmd = new Command('view', ["/c", "start", "explorer", path + "\\screenshot\\"]);
+    cmd.spawn();
+  }
 
   // app setting
   let sort = 'create_date';
@@ -289,7 +309,7 @@
     <Group variant="raised">
       <Wrapper>
         <Button on:click={startLog} variant="raised">
-          <Icon class="material-icons">fast_forward</Icon>
+          <Icon class="fa-solid fa-play"></Icon>
           <Label>Start</Label>
         </Button>
         <Tooltip>ロギングを開始します</Tooltip>
@@ -297,7 +317,7 @@
       <Wrapper>
         <Button on:click={stopLog} variant="raised">
           <Label>Stop</Label>
-          <Icon class="material-icons">close</Icon>
+          <Icon class="fa-solid fa-stop"></Icon>
         </Button>
         <Tooltip>ロギングを停止します</Tooltip>
     </Wrapper>
@@ -347,17 +367,16 @@
       <Cell columnId="filename" style="width: 100%;">
         <Label>File Name</Label>
         <!-- For non-numeric columns, icon comes second. -->
-        <IconButton class="material-icons">arrow_upward</IconButton>
+        <IconButton class="fas fa-duotone fa-arrow-up"></IconButton>
       </Cell>
       <Cell columnId="create_date">
         <Label>Create Date</Label>
-        <IconButton class="material-icons">arrow_upward</IconButton>
+        <IconButton class="fas fa-duotone fa-arrow-down"></IconButton>
       </Cell>
     </Row>
   </Head>
   <Body>
     {#each items as item }
-    
       <Row>
         <Cell on:click={rowClick(item.filename)}>{item.filename}</Cell>
         <Cell on:click={rowClick(item.filename)}>{item.create_date}</Cell>
@@ -368,26 +387,38 @@
 
 </div>
 {:else if active === 'Screenshot'}
-  <Wrapper>
-    <Button on:click={take_screenshot} variant="raised">
-      <Icon class="material-icons">screenshot</Icon>
-      <Label>Capture</Label>
-    </Button>
-    <Tooltip>スクリーンショットを撮ります</Tooltip>
-  </Wrapper>
+  <Group variant="raised">
+    <Wrapper>
+      <Button on:click={take_screenshot} variant="raised">
+        <Icon class="fa-solid fa-image"></Icon>
+        <Label>Capture</Label>
+      </Button>
+      <Tooltip>スクリーンショットを撮ります</Tooltip>
+    </Wrapper>
+    <Wrapper>
+      <Button on:click={show_screenshotdir} variant="raised">
+        <Label>Folder Open</Label>
+        <Icon class="fa-regular fa-folder-open"></Icon>
+      </Button>
+      <Tooltip>スクリーンショットフォルダを開きます</Tooltip>
+    </Wrapper>
+  </Group>
+
   <hr />
+  <div class="screenshots">
   <LayoutGrid>
     {#each imagelist as img, i}
       <Cell on:click={imageview(img.filename)}>
-        <div class="demo-cell"><img src="{img.base64}" width="90" /></div>
+        <img src={convertFileSrc("screenshot/" + img.filename) } width="90" />
       </Cell>
     {/each}
   </LayoutGrid>
+  </div>
 {/if}
 
 <Dialog bind:open sheet aria-describedby="sheet-content">
   <Content id="sheet-content">
-    <IconButton action="close" class="material-icons">close</IconButton>
+    <IconButton action="close" class="fa-solid fa-circle-xmark"></IconButton>
     <canvas class="chart" id="chart_ikusei"></canvas>
   </Content>
 </Dialog>

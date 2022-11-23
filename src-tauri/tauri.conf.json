@@ -8,13 +8,17 @@
   },
   "package": {
     "productName": "UmaUmaLogger",
-    "version": "0.2.0"
+    "version": "0.2.4"
   },
   "tauri": {
     "allowlist": {
       "all": true,
       "path": {
         "all": true
+      },
+      "protocol": {
+        "asset": true,
+        "assetScope": ["**"]
       },
       "shell": {
         "all": true,
@@ -75,7 +79,7 @@
       }
     },
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; img-src 'self' asset: https://asset.localhost"
     },
     "updater": {
       "active": false
