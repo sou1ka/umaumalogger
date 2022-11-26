@@ -21,6 +21,7 @@ dxcapture = { version = "1.1", features = ["img"] }
 chrono = "0.4.23"
 image = "0.24.5"
 base64 = "0.13.1"
+easy-http-request = "0.2.13"
 
 [features]
 # by default Tauri runs in production mode

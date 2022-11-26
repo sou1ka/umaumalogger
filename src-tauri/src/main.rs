@@ -3,8 +3,8 @@
     windows_subsystem = "windows"
 )]
 
-use tauri::api::dialog;
-use tauri::{CustomMenuItem, Menu, MenuItem, Submenu};
+use tauri::api::{dialog, shell};
+use tauri::{CustomMenuItem, Menu, MenuItem, Submenu, Manager};
 
 use std::env;
 use std::io;
@@ -16,6 +16,7 @@ use chrono::Utc;
 use image::imageops::FilterType;
 use image::ImageOutputFormat;
 use std::io::Cursor;
+use easy_http_request::DefaultHttpRequest;
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
@@ -118,13 +119,15 @@ fn get_imagelist() -> String {
 }
 
 fn main() {
-    let exit = CustomMenuItem::new("exit".to_string(), "Exit");
-    let version = CustomMenuItem::new("vers".to_string(), "Version");
-    let filemenu = Submenu::new("File", Menu::new().add_item(exit));
-    let helpmenu = Submenu::new("Help", Menu::new().add_item(version));
+    let exit = CustomMenuItem::new("exit".to_string(), "終了");
+    let check = CustomMenuItem::new("check".to_string(), "更新をチェック");
+    let version = CustomMenuItem::new("vers".to_string(), "バージョン情報");
+    let filemenu = Submenu::new("ファイル", Menu::new().add_item(exit));
+    let helpmenu = Submenu::new("ヘルプ", Menu::new().add_item(check).add_native_item(MenuItem::Separator).add_item(version));
     let menu = Menu::new()
         .add_submenu(filemenu)
         .add_submenu(helpmenu);
+    let context = tauri::generate_context!();
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             filelogging,
@@ -141,8 +144,28 @@ fn main() {
                 "exit" => {
                     std::process::exit(0);
                 }
+                "check" => {
+                    let checker = check_version();
+                    let context = tauri::generate_context!();
+                    let package = context.package_info();
+                    let ver = package.version.to_string();
+                    if ver != checker {
+                        let scope = event.window().shell_scope();
+                        dialog::ask(Some(&event.window()), &package.name, "新しいバージョンがあります。ダウンロードしますか？", move |answer| {
+                            println!("{}", answer);
+                            if answer {
+                                shell::open(&scope, "http://www.plasmasphere.net/archives/umaumalogger/", None);
+                            }
+                        });
+                    } else {
+                        dialog::message(Some(&event.window()), &package.name, "最新バージョンです。");
+                    }
+                }
                 "vers" => {
-                    dialog::message(Some(&event.window()), "UmaUmaLogger", "Version 0.2.4.20221123\n\rAuthor: sou1ka @sou1ka");
+                    let context = tauri::generate_context!();
+                    let package = context.package_info();
+                    let msg: String = format!("UmaUmaLogger\r\n\r\nVersion {}\n\rAuthor: sou1ka @sou1ka", package.version);
+                    dialog::message(Some(&event.window()), &package.name, &msg);
                 }
                 _ => {}
             }
@@ -181,4 +204,9 @@ fn get_imgbase64(path: &str) -> String {
     let res_base64 = base64::encode(buf);
     
     return format!("data:image/png;base64,{}", res_base64);
+}
+
+fn check_version() -> String {
+    let response = DefaultHttpRequest::get_from_url_str("http://www.plasmasphere.net/archives/umaumalogger/api/version.txt").unwrap().send().unwrap();
+    return String::from_utf8(response.body).unwrap();
 }
