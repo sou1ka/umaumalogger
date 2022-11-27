@@ -25,6 +25,7 @@
     Supporting,
   } from '@smui/image-list';
   import LayoutGrid from '@smui/layout-grid';
+  import Paper, { Subtitle } from '@smui/paper';
 
   import { WebviewWindow } from '@tauri-apps/api/window';
   function viewWindow() {
@@ -163,6 +164,19 @@
     cmd.spawn();
   }
 
+  let eventName = '';
+  let events = [];
+  async function check_events() {
+    let ret = await invoke("get_eventvalue");
+
+    if(ret) {
+      let event = JSON.parse(ret);
+      eventName = event.eventName;
+      events = event.events;
+    }
+  }
+  setInterval(check_events, 2000);
+
   // app setting
   let sort = 'create_date';
   let sortDirection = 'ascending';
@@ -295,7 +309,7 @@
 </script>
 
 <div class="tab">
-  <TabBar tabs={['Console', 'List', 'Screenshot']} let:tab bind:active>
+  <TabBar tabs={['Console', 'List', 'Events', 'Screenshot']} let:tab bind:active>
     <Tab {tab} minWidth on:click={get_loglists}>
       <Label>{tab}</Label>
     </Tab>
@@ -386,6 +400,19 @@
   </DataTable>
 
 </div>
+{:else if active === 'Events'}
+
+<div class="paper-container">
+  <Title>{eventName}</Title>
+  {#each events as ev}
+    <Paper variant="unelevated">
+      <Title>{ev.select}</Title>
+      <Content>{ev.value}</Content>
+    </Paper>
+    <hr />
+  {/each}
+</div>
+
 {:else if active === 'Screenshot'}
   <Group variant="raised">
     <Wrapper>

@@ -12,6 +12,7 @@ use std::fs;
 use std::os::windows::fs::MetadataExt;
 use std::path::Path;
 use std::collections::HashMap;
+use std::time::SystemTime;
 use chrono::Utc;
 use image::imageops::FilterType;
 use image::ImageOutputFormat;
@@ -118,6 +119,38 @@ fn get_imagelist() -> String {
     format!("[{}]", arr.join(","))
 }
 
+#[tauri::command]
+fn get_eventvalue() -> String {
+    let path = env::temp_dir().to_str().unwrap().to_string() + "umalog\\scr_ikusei_event.txt";
+    let mut ret: String = String::from("");
+
+    if Path::new(&path).exists() {
+        let now:u64 = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs()-2;
+        let meta = fs::metadata(&path).unwrap();
+        let modify = meta.modified().unwrap().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
+        
+        if now <= modify {
+            let event_name = fs::read_to_string(path).unwrap();
+
+            if event_name != "" {
+                let response = DefaultHttpRequest::get_from_url_str("http://www.plasmasphere.net/archives/umaumalogger/api/event.php?kwd=".to_owned() + &event_name).unwrap().send();
+                match response {
+                    Ok(r) => {
+                        if r.status_code == 200 {
+                            ret = String::from_utf8(r.body).unwrap();
+                        }
+                    },
+                    Err(e) => {
+                        ret = String::from("");
+                    }
+                }
+            }
+        }
+    }
+
+    format!("{}", ret)
+}
+
 fn main() {
     let exit = CustomMenuItem::new("exit".to_string(), "終了");
     let check = CustomMenuItem::new("check".to_string(), "更新をチェック");
@@ -127,7 +160,6 @@ fn main() {
     let menu = Menu::new()
         .add_submenu(filemenu)
         .add_submenu(helpmenu);
-    let context = tauri::generate_context!();
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             filelogging,
@@ -136,7 +168,8 @@ fn main() {
             get_loglists,
             get_filelog,
             take_screenshot,
-            get_imagelist
+            get_imagelist,
+            get_eventvalue
         ])
         .menu(menu)
         .on_menu_event(|event| {
@@ -149,7 +182,11 @@ fn main() {
                     let context = tauri::generate_context!();
                     let package = context.package_info();
                     let ver = package.version.to_string();
-                    if ver != checker {
+
+                    if checker == "0" {
+                        dialog::message(Some(&event.window()), &package.name, "更新チェックに失敗しました。");
+
+                    } else if ver != checker {
                         let scope = event.window().shell_scope();
                         dialog::ask(Some(&event.window()), &package.name, "新しいバージョンがあります。ダウンロードしますか？", move |answer| {
                             println!("{}", answer);
@@ -157,6 +194,7 @@ fn main() {
                                 shell::open(&scope, "http://www.plasmasphere.net/archives/umaumalogger/", None);
                             }
                         });
+
                     } else {
                         dialog::message(Some(&event.window()), &package.name, "最新バージョンです。");
                     }
@@ -207,6 +245,14 @@ fn get_imgbase64(path: &str) -> String {
 }
 
 fn check_version() -> String {
-    let response = DefaultHttpRequest::get_from_url_str("http://www.plasmasphere.net/archives/umaumalogger/api/version.txt").unwrap().send().unwrap();
-    return String::from_utf8(response.body).unwrap();
+    let response = DefaultHttpRequest::get_from_url_str("http://www.plasmasphere.net/archives/umaumalogger/api/version.txt").unwrap().send();
+    match response {
+        Ok(r) => {
+            return String::from_utf8(r.body).unwrap();
+        },
+        Err(e) => {
+            return "0".to_string();
+        }
+    }
 }
+
