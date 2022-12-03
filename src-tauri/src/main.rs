@@ -120,7 +120,7 @@ fn get_imagelist() -> String {
 }
 
 #[tauri::command]
-fn get_eventvalue() -> String {
+fn get_eventvalue(musumename: &str, force: bool) -> String {
     let path = env::temp_dir().to_str().unwrap().to_string() + "umalog\\scr_ikusei_event.txt";
     let mut ret: String = String::from("");
 
@@ -128,12 +128,12 @@ fn get_eventvalue() -> String {
         let now:u64 = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs()-2;
         let meta = fs::metadata(&path).unwrap();
         let modify = meta.modified().unwrap().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
-        
-        if now <= modify {
+
+        if now <= modify || force {
             let event_name = fs::read_to_string(path).unwrap();
 
-            if event_name != "" {
-                let response = DefaultHttpRequest::get_from_url_str("http://www.plasmasphere.net/archives/umaumalogger/api/event.php?kwd=".to_owned() + &event_name).unwrap().send();
+            if event_name != "" || force {
+                let response = DefaultHttpRequest::get_from_url_str("http://www.plasmasphere.net/archives/umaumalogger/api/event.php?kwd=".to_owned() + &base64::encode(&event_name)+ "&musumename=" + &base64::encode(musumename)).unwrap().send();
                 match response {
                     Ok(r) => {
                         if r.status_code == 200 {
@@ -189,7 +189,6 @@ fn main() {
                     } else if ver != checker {
                         let scope = event.window().shell_scope();
                         dialog::ask(Some(&event.window()), &package.name, "新しいバージョンがあります。ダウンロードしますか？", move |answer| {
-                            println!("{}", answer);
                             if answer {
                                 shell::open(&scope, "http://www.plasmasphere.net/archives/umaumalogger/", None);
                             }

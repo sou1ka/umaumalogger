@@ -40,6 +40,11 @@ p {
   max-height: 60vh;
   word-wrap: break-word;
   user-select: text;
+  scrollbar-color: #333;
+}
+
+::-webkit-scrollbar-track {
+  background: #333;
 }
 
 .console ul {
@@ -90,6 +95,15 @@ p {
   overflow-y: scroll;
   min-height: 60vh;
   max-height: 60vh;
+  scrollbar-color: auto;
+}
+
+canvas {
+  background-color: #fff;
+}
+
+#chart_result {
+  width: 50vw;
 }
 
 @media (min-width: 592px)
@@ -102,7 +116,7 @@ p {
     filter: invert(1) hue-rotate(120deg);
   }
   
-  img, .console, .console *, canvas, canvas * {
+  img, .console, .console *, .console::-webkit-scrollbar, canvas, canvas * {
     filter: invert(1) hue-rotate(240deg);
   }
 }

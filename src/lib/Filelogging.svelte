@@ -29,8 +29,8 @@
 
   import { WebviewWindow } from '@tauri-apps/api/window';
   function viewWindow() {
-    new WebviewWindow('my-label', {
-      url: 'src/version.html'
+    new WebviewWindow('graph', {
+      url: 'src/graph.html'
     });
   }
 
@@ -110,7 +110,7 @@
     items = [];
     let ret = await invoke("get_loglists");
     let lists = JSON.parse(ret);
-    
+
     if(!lists) { return; }
 
     for(let i in lists) {
@@ -164,16 +164,23 @@
     cmd.spawn();
   }
 
+  let musumename = '';
   let eventName = '';
   let events = [];
-  async function check_events() {
-    let ret = await invoke("get_eventvalue");
+  async function check_events(force) {
+    let ret = await invoke("get_eventvalue", {
+      musumename: musumename,
+      force: force || false
+    });
 
     if(ret) {
       let event = JSON.parse(ret);
       eventName = event.eventName;
       events = event.events;
     }
+  }
+  async function check_events_force() {
+    check_events(true);
   }
   setInterval(check_events, 2000);
 
@@ -215,22 +222,33 @@
           responsive: true
         }
       });
-    /*  chartResult = new Chart(document.getElementById('chart_result'), {
+      chartResult = new Chart(document.getElementById('chart_result'), {
         type: "radar",
         data: {
-          type: 'line',
-          data: {
-            labels: ['1', '2'],
-            datasets: [{
-              label: 'dummy',
-              data: [1, 2]
-            }]
-          }
+          labels: ['スピード', 'スタミナ', 'パワー', '根性', '賢さ'],
+          datasets: [{
+            data: [100, 100, 100, 100, 100],
+            borderColor: ["#1565C0", "#C62828", "#F9A825", "#6A1B9A", "#558B2F"],
+            backgroundColor: "rgba(200, 20, 80, 0.4)",
+            pointRadius: 10,
+            pointHoverRadius: 20
+          }]
         },
         options: {
-          responsive: true
+          plugins: {
+            legend: {
+              display: false
+            }
+          },
+          responsive: true,
+          scale: {
+            beginAtZero: true,
+            max: 1200,
+            min: 0,
+            stepSize: 100
+          }
         }
-      });*/
+      });
     }
 
     open = true;
@@ -305,6 +323,16 @@
       }]
     };
     chartIkusei.update();
+
+    let radarVal = [];
+    radarVal.push(Number(speeds[speeds.length-1]));
+    radarVal.push(Number(staminas[staminas.length-1]));
+    radarVal.push(Number(powers[powers.length-1]));
+    radarVal.push(Number(mentals[mentals.length-1]));
+    radarVal.push(Number(intellis[intellis.length-1]));
+    chartResult.data.datasets[0].data = radarVal;
+    chartResult.options.scale.max = Math.max.apply(null, radarVal);
+    chartResult.update();
   }
 </script>
 
@@ -317,42 +345,40 @@
 </div>
 
 {#if active === 'Console'}
-<div>
-  <div class="row">
-    <Textfield variant="outlined" bind:value={filename} label="Filename"></Textfield>
-    <Group variant="raised">
-      <Wrapper>
-        <Button on:click={startLog} variant="raised">
-          <Icon class="fa-solid fa-play"></Icon>
-          <Label>Start</Label>
-        </Button>
-        <Tooltip>ロギングを開始します</Tooltip>
-      </Wrapper>
-      <Wrapper>
-        <Button on:click={stopLog} variant="raised">
-          <Label>Stop</Label>
-          <Icon class="fa-solid fa-stop"></Icon>
-        </Button>
-        <Tooltip>ロギングを停止します</Tooltip>
+<div class="row">
+  <Textfield variant="outlined" bind:value={filename} label="Filename"></Textfield>
+  <Group variant="raised">
+    <Wrapper>
+      <Button on:click={startLog} variant="raised">
+        <Icon class="fa-solid fa-play"></Icon>
+        <Label>Start</Label>
+      </Button>
+      <Tooltip>ロギングを開始します</Tooltip>
     </Wrapper>
-    </Group>
-  </div>
+    <Wrapper>
+      <Button on:click={stopLog} variant="raised">
+        <Label>Stop</Label>
+        <Icon class="fa-solid fa-stop"></Icon>
+      </Button>
+      <Tooltip>ロギングを停止します</Tooltip>
+  </Wrapper>
+  </Group>
+</div>
 
-  <!--
-  <p><small>育成ステータスをロギングします。
-    シーズン、スピード、スタミナ、パワー、根性、賢さ、スキルPtを取得します。
-    OCRで認識するので、文字によっては正しく取れないかもしれません（8が3になったりします）</small></p>
-  -->
+<!--
+<p><small>育成ステータスをロギングします。
+  シーズン、スピード、スタミナ、パワー、根性、賢さ、スキルPtを取得します。
+  OCRで認識するので、文字によっては正しく取れないかもしれません（8が3になったりします）</small></p>
+-->
 
-  <hr />
+<hr />
 
-  <div class="console">
-    <ul>
-    {#each loggingMsg as msg}
-      <li>{msg}</li>
-    {/each}
-    </ul>
-  </div>
+<div class="console">
+  <ul>
+  {#each loggingMsg as msg}
+    <li>{msg}</li>
+  {/each}
+  </ul>
 </div>
 
 {:else if active === 'List'}
@@ -381,11 +407,11 @@
       <Cell columnId="filename" style="width: 100%;">
         <Label>File Name</Label>
         <!-- For non-numeric columns, icon comes second. -->
-        <IconButton class="fas fa-duotone fa-arrow-up"></IconButton>
+        <IconButton class="fas fa-duotone fa-arrow-down"></IconButton>
       </Cell>
       <Cell columnId="create_date">
         <Label>Create Date</Label>
-        <IconButton class="fas fa-duotone fa-arrow-down"></IconButton>
+        <IconButton class="fas fa-duotone fa-arrow-up"></IconButton>
       </Cell>
     </Row>
   </Head>
@@ -400,7 +426,19 @@
   </DataTable>
 
 </div>
+
 {:else if active === 'Events'}
+
+<div class="row">
+  <Textfield variant="outlined" bind:value={musumename} label="育成ウマ娘"></Textfield>
+  <Wrapper>
+    <Button on:click={check_events_force} variant="raised">
+      <Icon class="fas fa-light fa-list-check"></Icon>
+      <Label>Check</Label>
+    </Button>
+    <Tooltip>表示中のイベントをチェックします</Tooltip>
+  </Wrapper>
+</div>
 
 <div class="paper-container">
   <Title>{eventName}</Title>
@@ -447,5 +485,6 @@
   <Content id="sheet-content">
     <IconButton action="close" class="fa-solid fa-circle-xmark"></IconButton>
     <canvas class="chart" id="chart_ikusei"></canvas>
+    <canvas class="chart" id="chart_result"></canvas>
   </Content>
 </Dialog>
