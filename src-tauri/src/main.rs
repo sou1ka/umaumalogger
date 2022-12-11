@@ -4,7 +4,7 @@
 )]
 
 use tauri::api::{dialog, shell};
-use tauri::{CustomMenuItem, Menu, MenuItem, Submenu, Manager};
+use tauri::{CustomMenuItem, Menu, MenuItem, Submenu, Manager, EventHandler};
 
 use std::env;
 use std::io;
@@ -12,6 +12,7 @@ use std::fs;
 use std::os::windows::fs::MetadataExt;
 use std::path::Path;
 use std::collections::HashMap;
+use std::ptr::null;
 use std::time::SystemTime;
 use chrono::Utc;
 use image::imageops::FilterType;
@@ -120,19 +121,29 @@ fn get_imagelist() -> String {
 }
 
 #[tauri::command]
-fn get_eventvalue(musumename: &str, force: bool) -> String {
+fn get_eventvalue(musumename: &str, eventname: &str, force: bool) -> String {
     let path = env::temp_dir().to_str().unwrap().to_string() + "umalog\\scr_ikusei_event.txt";
     let mut ret: String = String::from("");
+    let exists = Path::new(&path).exists();
 
-    if Path::new(&path).exists() {
-        let now:u64 = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs()-2;
-        let meta = fs::metadata(&path).unwrap();
-        let modify = meta.modified().unwrap().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
+    if force || exists {
+        let mut now:u64 = 0;
+        let mut modify:u64 = 0;
 
-        if now <= modify || force {
-            let event_name = fs::read_to_string(path).unwrap();
+        if exists{
+            now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs()-1;
+            let meta = fs::metadata(&path).unwrap();
+            modify = meta.modified().unwrap().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
+        }
 
-            if event_name != "" || force {
+        if force || now <= modify {
+            let mut event_name = eventname.to_string();
+
+            if eventname == "" && exists {
+                event_name = fs::read_to_string(path).unwrap();
+            }
+
+            if event_name != "" {
                 let response = DefaultHttpRequest::get_from_url_str("http://www.plasmasphere.net/archives/umaumalogger/api/event.php?kwd=".to_owned() + &base64::encode(&event_name)+ "&musumename=" + &base64::encode(musumename)).unwrap().send();
                 match response {
                     Ok(r) => {
@@ -206,7 +217,15 @@ fn main() {
                 }
                 _ => {}
             }
-          })
+        })
+        .setup(|app| {
+            let app_handle = app.app_handle();
+            std::thread::spawn(move || loop {
+                app_handle.emit_all("eventrefresh", get_eventvalue("", "", false)).unwrap();
+                std::thread::sleep(std::time::Duration::from_secs(1));
+            });
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

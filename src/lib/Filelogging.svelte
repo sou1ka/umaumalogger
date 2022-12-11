@@ -2,6 +2,7 @@
   import { invoke } from "@tauri-apps/api/tauri"
   import { Command } from '@tauri-apps/api/shell'
   import { convertFileSrc } from '@tauri-apps/api/tauri';
+  import { listen, emit  } from '@tauri-apps/api/event'
 
   import Button, { Group, Label, Icon } from '@smui/button';
   import Textfield from '@smui/textfield';
@@ -17,13 +18,6 @@
   } from '@smui/data-table';
   import IconButton from '@smui/icon-button';
   import Dialog, { Header, Title, Content } from '@smui/dialog';
-  import Snackbar, { Actions } from '@smui/snackbar';
-  import ImageList, {
-    Item,
-    ImageAspectContainer,
-    Image,
-    Supporting,
-  } from '@smui/image-list';
   import LayoutGrid from '@smui/layout-grid';
   import Paper, { Subtitle } from '@smui/paper';
 
@@ -166,23 +160,29 @@
 
   let musumename = '';
   let eventName = '';
+  let event_name = '';
   let events = [];
-  async function check_events(force) {
+  async function check_events() {
     let ret = await invoke("get_eventvalue", {
       musumename: musumename,
-      force: force || false
+      eventname: event_name,
+      force: true
     });
 
-    if(ret) {
-      let event = JSON.parse(ret);
-      eventName = event.eventName;
-      events = event.events;
-    }
+    event_refresh(ret);
   }
-  async function check_events_force() {
-    check_events(true);
+
+  async function event_refresh(ret) {
+    if(!ret) { return; }
+
+    let event = JSON.parse(ret);
+    eventName = event.eventName;
+    events = event.events;
   }
-  setInterval(check_events, 2000);
+
+  listen('eventrefresh', function(ret) {
+    event_refresh(ret.payload);
+  });
 
   // app setting
   let sort = 'create_date';
@@ -430,9 +430,10 @@
 {:else if active === 'Events'}
 
 <div class="row">
+  <Textfield variant="outlined" bind:value={event_name} label="イベント名"></Textfield>
   <Textfield variant="outlined" bind:value={musumename} label="育成ウマ娘"></Textfield>
   <Wrapper>
-    <Button on:click={check_events_force} variant="raised">
+    <Button on:click={check_events} variant="raised">
       <Icon class="fas fa-light fa-list-check"></Icon>
       <Label>Check</Label>
     </Button>
