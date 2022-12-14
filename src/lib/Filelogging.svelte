@@ -2,7 +2,7 @@
   import { invoke } from "@tauri-apps/api/tauri"
   import { Command } from '@tauri-apps/api/shell'
   import { convertFileSrc } from '@tauri-apps/api/tauri';
-  import { listen, emit  } from '@tauri-apps/api/event'
+  import { listen, emit, once } from '@tauri-apps/api/event'
 
   import Button, { Group, Label, Icon } from '@smui/button';
   import Textfield from '@smui/textfield';
@@ -32,10 +32,12 @@
   let now = new Date();
   let filename = String(now.getFullYear()) + String(now.getMonth()+1).padStart(2, '0') + String(now.getDate()).padStart(2, '0') + String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0') + String(now.getSeconds()).padStart(2, '0') + ".tsv"
   let process = null;
-  let iid = null;
+  let iid = false;
   let logno = "0";
   let active = "Console";
   let items = [];
+  let startStats = '';
+  let stopStats = "disabled";
 
   function addMsg(m) {
     if(m == '') { return; }
@@ -59,9 +61,17 @@
     ]);
     process = await cmd.spawn();
     addMsg("ロギングを開始しました。プロセスは " + process.pid + " です");
+    startStats = "disabled";
+    stopStats = "";
 
     get_loglists(true);
-    iid = setInterval(get_stdoutfile, 2000);
+  //  iid = setInterval(get_stdoutfile, 2000);
+
+    listen('logrefresh', function(ret) {
+      log_refresh(ret.payload);
+    });
+    emit('logcheck', { lognoStr: String(logno), filename: filename });
+    iid = true;
   }
 
   async function get_stdoutfile() {
@@ -82,15 +92,35 @@
     }
   }
 
+  async function log_refresh(ret) {
+    if(ret) {
+      let parse = ret.split("\n");
+      if(parse.length > 0) {
+        logno = String(parse[0]);
+
+        for(let i = 1, size = parse.length; i < size; i++) {
+          addMsg(parse[i].replace("\t", ", "));
+          if(parse[i].indexOf('育成完了') !== -1) {
+            stopLog();
+          }
+        }
+      }
+    }
+
+    if(iid) {
+      emit('logcheck', { lognoStr: String(logno), filename: filename });
+    }
+  }
+
   async function stopLog(silent) {
-    clearInterval(iid);
-    iid = null;
-
-//    if(!process) { return; }
-
+//    clearInterval(iid);
+    iid = false;
     let cmd = new Command('taskkill', ["/im", "umalog.exe", "/f"]);
     process = await cmd.spawn();
     process = false;
+    logno = "0";
+    startStats = "";
+    stopStats = "disabled";
     
     if(silent == true ) { return; }
 
@@ -347,22 +377,20 @@
 {#if active === 'Console'}
 <div class="row">
   <Textfield variant="outlined" bind:value={filename} label="Filename"></Textfield>
-  <Group variant="raised">
     <Wrapper>
-      <Button on:click={startLog} variant="raised">
+      <Button on:click={startLog} variant="raised" disabled="{startStats}">
         <Icon class="fa-solid fa-play"></Icon>
         <Label>Start</Label>
       </Button>
       <Tooltip>ロギングを開始します</Tooltip>
     </Wrapper>
     <Wrapper>
-      <Button on:click={stopLog} variant="raised">
+      <Button on:click={stopLog} variant="raised" disabled="{stopStats}">
         <Label>Stop</Label>
         <Icon class="fa-solid fa-stop"></Icon>
       </Button>
       <Tooltip>ロギングを停止します</Tooltip>
   </Wrapper>
-  </Group>
 </div>
 
 <!--

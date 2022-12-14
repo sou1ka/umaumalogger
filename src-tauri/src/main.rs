@@ -4,7 +4,7 @@
 )]
 
 use tauri::api::{dialog, shell};
-use tauri::{CustomMenuItem, Menu, MenuItem, Submenu, Manager, EventHandler};
+use tauri::{CustomMenuItem, Menu, MenuItem, Submenu, Manager};
 
 use std::env;
 use std::io;
@@ -12,7 +12,6 @@ use std::fs;
 use std::os::windows::fs::MetadataExt;
 use std::path::Path;
 use std::collections::HashMap;
-use std::ptr::null;
 use std::time::SystemTime;
 use chrono::Utc;
 use image::imageops::FilterType;
@@ -30,16 +29,19 @@ fn filelogging(filename: &str) -> String {
 fn get_filelog_lastline(logno_str: &str, filename: &str) -> String {
     let path = &format!("{}\\out\\{}", get_currentpath(), filename);
     let mut ret = String::from("");
-    let dat = fs::read_to_string(path).expect("not read file.");
-    let dats:Vec<&str> = dat.trim().lines().collect();
-    let linecount = dats.len();
-    let logno:usize = logno_str.parse().unwrap();//println!("linecount {}, logno {}", linecount, logno);
-    ret += &linecount.to_string();
-    ret += "\n";
-    if logno < linecount {
-        for n in logno..linecount {
-            ret += &dats[n].to_string();
-            ret += "\n";
+
+    if Path::new(&path).exists() {
+        let dat = fs::read_to_string(path).expect("not read file.");
+        let dats:Vec<&str> = dat.trim().lines().collect();
+        let linecount = dats.len();
+        let logno:usize = logno_str.parse().unwrap();//println!("linecount {}, logno {}", linecount, logno);
+        ret += &linecount.to_string();
+        ret += "\n";
+        if logno < linecount {
+            for n in logno..linecount {
+                ret += &dats[n].to_string();
+                ret += "\n";
+            }
         }
     }
 
@@ -224,6 +226,22 @@ fn main() {
                 app_handle.emit_all("eventrefresh", get_eventvalue("", "", false)).unwrap();
                 std::thread::sleep(std::time::Duration::from_secs(1));
             });
+            Ok(())
+        })
+        .setup(|app| {
+            let app_handle = app.app_handle();
+            app.listen_global("logcheck", move |event| {
+                let arg: HashMap<&str, &str> = serde_json::from_str(event.payload().unwrap()).unwrap();
+                std::thread::sleep(std::time::Duration::from_secs(1));
+                println!("logcheck {:?}", arg);
+                app_handle.emit_all("logrefresh", get_filelog_lastline(arg.get("lognoStr").unwrap(), arg.get("filename").unwrap())).unwrap();
+            });
+            //app.manage(EventIdValue(eid.to_owned().to_string()));
+            //app.listen_global("logcheck-stop", move |event| {
+            //    println!("logcheck-stop eid: {}", eid);
+            //    main_window.unlisten(eid);
+            //});
+            
             Ok(())
         })
         .run(tauri::generate_context!())

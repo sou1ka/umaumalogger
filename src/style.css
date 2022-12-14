@@ -36,8 +36,7 @@ p {
   padding: 5px 10px;
   text-align: left;
   overflow-y: scroll;
-  min-height: 60vh;
-  max-height: 60vh;
+  height: 60vh;
   word-wrap: break-word;
   user-select: text;
   scrollbar-color: #333;
@@ -75,7 +74,7 @@ p {
 }
 
 .mdc-data-table {
-  height: 65vh;
+  height: 70vh;
 }
 
 .mdc-layout-grid__inner {
@@ -90,11 +89,17 @@ p {
   align-items: center;
 }
 
-.screenshots {
-  padding: 5px 10px;
+.paper-container {
+  padding: 5px 0;
+  height: 58vh;
   overflow-y: scroll;
-  min-height: 60vh;
-  max-height: 60vh;
+  scrollbar-color: auto;
+}
+
+.screenshots {
+  padding: 5px 0;
+  overflow-y: scroll;
+  height: 60vh;
   scrollbar-color: auto;
 }
 
@@ -106,9 +111,58 @@ canvas {
   width: 50vw;
 }
 
-@media (min-width: 592px)
-.mdc-dialog .mdc-dialog__surface {
-    max-width: 560px;
+@media (max-height: 590px) {
+  .console {
+    height: 40vh;
+  }
+
+  .mdc-data-table {
+    height: 55vh;
+  }
+
+  .paper-container {
+    height: 36vh;
+  }
+
+  .screenshots {
+    height: 40vh;
+  }
+}
+
+@media (min-height: 760px) {
+  .console {
+    height: 70vh;
+  }
+
+  .mdc-data-table {
+    height: 75vh;
+  }
+
+  .paper-container {
+    height: 66vh;
+  }
+
+  .screenshots {
+    height: 70vh;
+  }
+}
+
+@media (min-height: 960px) {
+  .console {
+    height: 76vh;
+  }
+
+  .mdc-data-table {
+    height: 82vh;
+  }
+
+  .paper-container {
+    height: 72vh;
+  }
+
+  .screenshots {
+    height: 76vh;
+  }
 }
 
 @media (prefers-color-scheme: dark) {

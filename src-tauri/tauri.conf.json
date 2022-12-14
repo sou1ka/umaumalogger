@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "UmaUmaLogger",
-    "version": "0.6.0"
+    "version": "0.6.1"
   },
   "tauri": {
     "allowlist": {
@@ -92,7 +92,7 @@
         "resizable": true,
         "title": "UmaUmaLogger",
         "width": 800,
-        "minWidth": 400
+        "minWidth": 580
       }
     ]
   }
