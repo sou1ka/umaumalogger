@@ -14,10 +14,9 @@ use std::path::Path;
 use std::collections::HashMap;
 use std::time::SystemTime;
 use chrono::Utc;
-use image::imageops::FilterType;
-use image::ImageOutputFormat;
-use std::io::Cursor;
 use easy_http_request::DefaultHttpRequest;
+
+mod screenshot;
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
@@ -80,29 +79,15 @@ fn get_filelog(filename: &str) -> String {
 
 #[tauri::command]
 fn take_screenshot() -> String {
-    let device = dxcapture::Device::new_from_window("umamusume".to_string());
+    let now = Utc::now().format("%Y%m%d%H%M%S").to_string();
+    let path = &format!("{}\\screenshot\\{}.png", get_currentpath(), now);
+    let res = screenshot::capture(&path);
 
-    match device {
-        Ok(d) => {
-        //    let d = dxcapture::Device::new_from_window("umamusume".to_string()).expect("There is no 'umamusume' window.");
-            let capture = dxcapture::Capture::new(&d).unwrap();
-            let image = capture.wait_img_frame().expect("Failed to capture");
-            let now = Utc::now().format("%Y%m%d%H%M%S").to_string();
-            let path = &format!("{}\\screenshot\\{}.png", get_currentpath(), now);
-            let out = image.data.save(path);
-
-            match out {
-                Ok(o) => {
-                    format!("{}.png", now)
-                },
-                Err(e) => {
-                    format!("{}", e)
-                }
-            }
-           
-        },
-        Err(e) => format!("There is no 'umamusume' window.")
-    }    
+    if res {
+        format!("{}.png", now)
+    } else {
+        format!("")
+    }
 }
 
 #[tauri::command]
@@ -153,7 +138,7 @@ fn get_eventvalue(musumename: &str, eventname: &str, force: bool) -> String {
                             ret = String::from_utf8(r.body).unwrap();
                         }
                     },
-                    Err(e) => {
+                    Err(_e) => {
                         ret = String::from("");
                     }
                 }
@@ -203,7 +188,7 @@ fn main() {
                         let scope = event.window().shell_scope();
                         dialog::ask(Some(&event.window()), &package.name, "新しいバージョンがあります。ダウンロードしますか？", move |answer| {
                             if answer {
-                                shell::open(&scope, "http://www.plasmasphere.net/archives/umaumalogger/", None);
+                                shell::open(&scope, "http://www.plasmasphere.net/archives/umaumalogger/", None).unwrap();
                             }
                         });
 
@@ -233,7 +218,7 @@ fn main() {
             app.listen_global("logcheck", move |event| {
                 let arg: HashMap<&str, &str> = serde_json::from_str(event.payload().unwrap()).unwrap();
                 std::thread::sleep(std::time::Duration::from_secs(1));
-                println!("logcheck {:?}", arg);
+            //    println!("logcheck {:?}", arg);
                 app_handle.emit_all("logrefresh", get_filelog_lastline(arg.get("lognoStr").unwrap(), arg.get("filename").unwrap())).unwrap();
             });
             //app.manage(EventIdValue(eid.to_owned().to_string()));
@@ -265,19 +250,7 @@ fn get_currentpath() -> String {
     let cd = env::current_dir().unwrap();
 
     return cd.to_string_lossy().to_string();
-}
-
-fn get_imgbase64(path: &str) -> String {
-    let img = image::open(&path).expect(&path);
-    let nwidth: u32 = 90; // thumbnail width
-    let nheight: u32 = img.height();
-
-    let resized_img = img.resize(nwidth, nheight, FilterType::Lanczos3);
-    let mut buf: Vec<u8> = Vec::new();
-    resized_img.write_to(&mut Cursor::new(&mut buf), ImageOutputFormat::Png).unwrap();
-    let res_base64 = base64::encode(buf);
-    
-    return format!("data:image/png;base64,{}", res_base64);
+//    return String::from("R:\\test");
 }
 
 fn check_version() -> String {
@@ -286,7 +259,7 @@ fn check_version() -> String {
         Ok(r) => {
             return String::from_utf8(r.body).unwrap();
         },
-        Err(e) => {
+        Err(_e) => {
             return "0".to_string();
         }
     }

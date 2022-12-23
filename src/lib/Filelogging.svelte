@@ -148,15 +148,11 @@
   }
   get_loglists(true);
 
-  let scid;
   async function take_screenshot() {
-    let now = new Date();
-    let filename = String(now.getFullYear()) + String(now.getMonth()+1).padStart(2, '0') + String(now.getDate()).padStart(2, '0') + String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0') + String(now.getSeconds()).padStart(2, '0') + ".png"
-    let path = await invoke("get_path");
-    let cmd = new Command('capture', ["umamusume", path + "\\screenshot\\" + filename]);
-    cmd.spawn();
-
-    scid = setTimeout(get_imagelist, 5000);
+    let ret = await invoke("take_screenshot");
+    if(ret) {
+      get_imagelist();
+    }
   }
 
   async function imageview(img) {
@@ -166,21 +162,14 @@
   }
 
   let imagelist = [];
-  async function get_imagelist(force) {
-    //if(force) { imagelist = []; }
+  async function get_imagelist() {
     let ret = await invoke("get_imagelist");
     let images = JSON.parse(ret);
 
-    if(true) {
-      imagelist = [];
-      imagelist = images;
-    } else if(imagelist.length < images.length) {
-      imagelist.push(images[images.length-1]);
-    }
-
-    clearTimeout(scid);
+    imagelist = [];
+    imagelist = images;
   }
-  get_imagelist(true);
+  get_imagelist();
 
   async function show_screenshotdir() {
     let path = await invoke("get_path");
@@ -368,7 +357,7 @@
 
 <div class="tab">
   <TabBar tabs={['Console', 'List', 'Events', 'Screenshot']} let:tab bind:active>
-    <Tab {tab} minWidth on:click={get_loglists}>
+    <Tab {tab} minWidth>
       <Label>{tab}</Label>
     </Tab>
   </TabBar>
@@ -446,8 +435,8 @@
   <Body>
     {#each items as item }
       <Row>
-        <Cell on:click={rowClick(item.filename)}>{item.filename}</Cell>
-        <Cell on:click={rowClick(item.filename)}>{item.create_date}</Cell>
+        <Cell on:click={() => rowClick(item.filename)}>{item.filename}</Cell>
+        <Cell on:click={() => rowClick(item.filename)}>{item.create_date}</Cell>
       </Row>
     {/each}
   </Body>

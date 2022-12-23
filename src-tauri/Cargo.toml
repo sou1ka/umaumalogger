@@ -17,11 +17,37 @@ tauri-build = { version = "1.1", features = [] }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tauri = { version = "1.1", features = ["api-all"] }
-dxcapture = { version = "1.1", features = ["img"] }
 chrono = "0.4.23"
-image = "0.24.5"
+image = "0.23.14"
 base64 = "0.13.1"
 easy-http-request = "0.2.13"
+
+[dependencies.windows]
+version = "0.38.0"
+features = [
+    "alloc",
+    "Foundation",
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_System_Console",
+    "Win32_Graphics_Dwm",
+    "Win32_Graphics_Gdi",
+    "Win32_Graphics_Dxgi",
+    "Win32_Graphics_Dxgi_Common",
+    "Win32_Graphics_Direct3D",
+    "Win32_Graphics_Direct3D11",
+    "Win32_System_WinRT",
+    "Win32_System_WinRT_Direct3D11",
+    "Win32_System_WinRT_Graphics_Capture",
+    "UI",
+    "Storage",
+    "Storage_Streams",
+    "Graphics",
+    "Graphics_Capture",
+    "Graphics_DirectX",
+    "Graphics_DirectX_Direct3D11",
+    "Graphics_Imaging",
+]
 
 [features]
 # by default Tauri runs in production mode
