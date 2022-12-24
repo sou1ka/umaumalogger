@@ -199,7 +199,7 @@
     events = event.events;
   }
 
-  listen('eventrefresh', function(ret) {
+  listen('eventrefresh', function(ret) {console.log(ret);
     event_refresh(ret.payload);
   });
 

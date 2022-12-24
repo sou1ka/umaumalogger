@@ -211,9 +211,7 @@ fn main() {
                 app_handle.emit_all("eventrefresh", get_eventvalue("", "", false)).unwrap();
                 std::thread::sleep(std::time::Duration::from_secs(1));
             });
-            Ok(())
-        })
-        .setup(|app| {
+
             let app_handle = app.app_handle();
             app.listen_global("logcheck", move |event| {
                 let arg: HashMap<&str, &str> = serde_json::from_str(event.payload().unwrap()).unwrap();

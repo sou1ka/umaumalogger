@@ -34,7 +34,6 @@ use windows::Win32::UI::WindowsAndMessaging::{
 
 use std::ffi::OsString;
 use std::io::Write;
-use std::ptr::null;
 use std::sync::mpsc::channel;
 use image::{DynamicImage, ImageBuffer, Bgra};
 
