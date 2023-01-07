@@ -99,7 +99,6 @@ fn get_imagelist() -> String {
     for item in lists {
         let mut line: HashMap<&str, String> = HashMap::new();
         line.insert("filename", (&item).to_string());
-//        line.insert("base64", get_imgbase64(&format!("{}{}", &path, &item)));
         let serialized: String = serde_json::to_string(&line).unwrap();
         arr.push(serialized);
     }
@@ -131,7 +130,7 @@ fn get_eventvalue(musumename: &str, eventname: &str, force: bool) -> String {
             }
 
             if event_name != "" {
-                let response = DefaultHttpRequest::get_from_url_str("http://www.plasmasphere.net/archives/umaumalogger/api/event.php?kwd=".to_owned() + &base64::encode(&event_name)+ "&musumename=" + &base64::encode(musumename)).unwrap().send();
+                let response = DefaultHttpRequest::get_from_url_str("http://www.plasmasphere.net/archives/umaumalogger/api/event.php?kwd=".to_owned() + &urlencoding::encode(&event_name)+ "&musumename=" + &urlencoding::encode(musumename)).unwrap().send();
                 match response {
                     Ok(r) => {
                         if r.status_code == 200 {

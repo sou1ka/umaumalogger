@@ -2,7 +2,7 @@
   import { invoke } from "@tauri-apps/api/tauri"
   import { Command } from '@tauri-apps/api/shell'
   import { convertFileSrc } from '@tauri-apps/api/tauri';
-  import { listen, emit, once } from '@tauri-apps/api/event'
+  import { listen, emit } from '@tauri-apps/api/event'
 
   import Button, { Group, Label, Icon } from '@smui/button';
   import Textfield from '@smui/textfield';
@@ -38,6 +38,7 @@
   let items = [];
   let startStats = '';
   let stopStats = "disabled";
+  let canScreenshot = "";
 
   function addMsg(m) {
     if(m == '') { return; }
@@ -149,7 +150,9 @@
   get_loglists(true);
 
   async function take_screenshot() {
+    canScreenshot = "disabled";
     let ret = await invoke("take_screenshot");
+    canScreenshot = "";
     if(ret) {
       get_imagelist();
     }
@@ -472,7 +475,7 @@
 {:else if active === 'Screenshot'}
   <Group variant="raised">
     <Wrapper>
-      <Button on:click={take_screenshot} variant="raised">
+      <Button on:click={take_screenshot} variant="raised" disabled="{canScreenshot}">
         <Icon class="fa-solid fa-image"></Icon>
         <Label>Capture</Label>
       </Button>

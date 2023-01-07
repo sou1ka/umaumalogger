@@ -19,7 +19,7 @@ serde = { version = "1.0", features = ["derive"] }
 tauri = { version = "1.1", features = ["api-all"] }
 chrono = "0.4.23"
 image = "0.23.14"
-base64 = "0.13.1"
+urlencoding = "2.1.2"
 easy-http-request = "0.2.13"
 
 [dependencies.windows]
