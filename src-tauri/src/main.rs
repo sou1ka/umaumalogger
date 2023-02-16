@@ -4,7 +4,7 @@
 )]
 
 use tauri::api::{dialog, shell};
-use tauri::{CustomMenuItem, Menu, MenuItem, Submenu, Manager};
+use tauri::{CustomMenuItem, Menu, MenuItem, Submenu, Manager, SystemTray, SystemTrayMenu, SystemTrayMenuItem, SystemTrayEvent, WindowMenuEvent, Window};
 
 use std::env;
 use std::io;
@@ -152,11 +152,25 @@ fn main() {
     let exit = CustomMenuItem::new("exit".to_string(), "終了");
     let check = CustomMenuItem::new("check".to_string(), "更新をチェック");
     let version = CustomMenuItem::new("vers".to_string(), "バージョン情報");
-    let filemenu = Submenu::new("ファイル", Menu::new().add_item(exit));
-    let helpmenu = Submenu::new("ヘルプ", Menu::new().add_item(check).add_native_item(MenuItem::Separator).add_item(version));
+    let filemenu = Submenu::new("ファイル", Menu::new().add_item(exit.clone()));
+    let helpmenu = Submenu::new("ヘルプ", Menu::new().add_item(check.clone()).add_native_item(MenuItem::Separator).add_item(version));
     let menu = Menu::new()
         .add_submenu(filemenu)
         .add_submenu(helpmenu);
+
+    let shot = CustomMenuItem::new("shot".to_string(), "スクリーンショット");
+    let show = CustomMenuItem::new("show".to_string(), "表示");
+    let hide = CustomMenuItem::new("hide".to_string(), "隠す");
+    let tray_menu = SystemTrayMenu::new()
+        .add_item(shot)
+        .add_native_item(SystemTrayMenuItem::Separator)
+        .add_item(check.clone())
+        .add_native_item(SystemTrayMenuItem::Separator)
+        .add_item(show)
+        .add_item(hide)
+        .add_native_item(SystemTrayMenuItem::Separator)
+        .add_item(exit.clone());
+
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             filelogging,
@@ -175,25 +189,7 @@ fn main() {
                     std::process::exit(0);
                 }
                 "check" => {
-                    let checker = check_version();
-                    let context = tauri::generate_context!();
-                    let package = context.package_info();
-                    let ver = package.version.to_string();
-
-                    if checker == "0" {
-                        dialog::message(Some(&event.window()), &package.name, "更新チェックに失敗しました。");
-
-                    } else if ver != checker {
-                        let scope = event.window().shell_scope();
-                        dialog::ask(Some(&event.window()), &package.name, "新しいバージョンがあります。ダウンロードしますか？", move |answer| {
-                            if answer {
-                                shell::open(&scope, "http://www.plasmasphere.net/archives/umaumalogger/", None).unwrap();
-                            }
-                        });
-
-                    } else {
-                        dialog::message(Some(&event.window()), &package.name, "最新バージョンです。");
-                    }
+                    check_version(event.window());
                 }
                 "vers" => {
                     let context = tauri::generate_context!();
@@ -226,6 +222,44 @@ fn main() {
             
             Ok(())
         })
+        .system_tray(SystemTray::new().with_menu(tray_menu))
+        .on_system_tray_event(|app, event| match event {
+            SystemTrayEvent::DoubleClick {
+                position: _,
+                size: _,
+                ..
+            } => {
+                let window = app.get_window("main").unwrap();
+                window.unminimize().unwrap();
+                window.show().unwrap();
+                window.set_focus().unwrap();
+            }
+            SystemTrayEvent::MenuItemClick { id, .. } => {
+              match id.as_str() {
+                "show" => {
+                    let window = app.get_window("main").unwrap();
+                    window.unminimize().unwrap();
+                    window.show().unwrap();
+                    window.set_focus().unwrap();
+                }
+                "shot" => {
+                    let _ = &take_screenshot();
+                }
+                "check" => {
+                    check_version(&app.get_window("main").unwrap());
+                }
+                "hide" => {
+                    let window = app.get_window("main").unwrap();
+                    window.hide().unwrap();
+                }
+                "exit" => {
+                    std::process::exit(0);
+                }
+                _ => {}
+              }
+            }
+            _ => {}
+          })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -250,15 +284,36 @@ fn get_currentpath() -> String {
 //    return String::from("R:\\test");
 }
 
-fn check_version() -> String {
+fn check_version(win: &tauri::Window) {
     let response = DefaultHttpRequest::get_from_url_str("http://www.plasmasphere.net/archives/umaumalogger/api/version.txt").unwrap().send();
+    let mut checker = String::from("");
+
     match response {
         Ok(r) => {
-            return String::from_utf8(r.body).unwrap();
+            checker = String::from_utf8(r.body).unwrap();
         },
         Err(_e) => {
-            return "0".to_string();
+            checker = "0".to_string();
         }
+    }
+
+    let context = tauri::generate_context!();
+    let package = context.package_info();
+    let ver = package.version.to_string();
+
+    if checker == "0" {
+        dialog::message(Some(&win), &package.name, "更新チェックに失敗しました。");
+
+    } else if ver != checker {
+        let scope = win.shell_scope();
+        dialog::ask(Some(&win), &package.name, "新しいバージョンがあります。ダウンロードしますか？", move |answer| {
+            if answer {
+                shell::open(&scope, "http://www.plasmasphere.net/archives/umaumalogger/", None).unwrap();
+            }
+        });
+
+    } else {
+        dialog::message(Some(&win), &package.name, "最新バージョンです。");
     }
 }
 

@@ -1546,6 +1546,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
+name = "libappindicator"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "db2d3cb96d092b4824cb306c9e544c856a4cb6210c1081945187f7f1924b47e8"
+dependencies = [
+ "glib",
+ "gtk",
+ "gtk-sys",
+ "libappindicator-sys",
+ "log 0.4.17",
+]
+
+[[package]]
+name = "libappindicator-sys"
+version = "0.7.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f1b3b6681973cea8cc3bce7391e6d7d5502720b80a581c9a95c9cbaf592826aa"
+dependencies = [
+ "gtk-sys",
+ "libloading",
+ "once_cell",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.137"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1558,6 +1582,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c185b5b7ad900923ef3a8ff594083d4d9b5aea80bb4f32b8342363138c0d456b"
 dependencies = [
  "pkg-config",
+]
+
+[[package]]
+name = "libloading"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b67380fd3b2fbe7527a606e18729d21c6f3951633d0500574c4dc22d2d638b9f"
+dependencies = [
+ "cfg-if",
+ "winapi",
 ]
 
 [[package]]
@@ -2833,6 +2867,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "sha1"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c1da05c97445caa12d05e848c4a4fcbbea29e748ac28f7e80e9b010392063770"
+dependencies = [
+ "sha1_smol",
+]
+
+[[package]]
+name = "sha1_smol"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ae1a47186c03a32177042e55dbc5fd5aee900b8e0069a8d70fba96a9375cd012"
+
+[[package]]
 name = "sha2"
 version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3038,6 +3087,7 @@ dependencies = [
  "core-foundation",
  "core-graphics",
  "crossbeam-channel",
+ "dirs-next",
  "dispatch",
  "gdk",
  "gdk-pixbuf",
@@ -3051,6 +3101,7 @@ dependencies = [
  "instant",
  "jni",
  "lazy_static",
+ "libappindicator",
  "libc",
  "log 0.4.17",
  "ndk",
@@ -3148,6 +3199,7 @@ dependencies = [
  "tauri-build",
  "urlencoding",
  "windows 0.38.0",
+ "winrt",
 ]
 
 [[package]]
@@ -4204,6 +4256,53 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b68db261ef59e9e52806f688020631e987592bd83619edccda9c47d42cde4f6c"
 dependencies = [
  "toml",
+]
+
+[[package]]
+name = "winrt"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "daf62b1e56a9efd6caec59a053450dd9fe5bc3d0dc28a27d3054b85b68db95a4"
+dependencies = [
+ "sha1",
+ "winrt_macros",
+]
+
+[[package]]
+name = "winrt_gen"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f497492d5f30d47cb397c3d5bee37700996822311062a3a609493523ad3bb9ae"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "serde_json",
+ "sha1",
+ "syn",
+ "winrt_gen_macros",
+]
+
+[[package]]
+name = "winrt_gen_macros"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "85cd78ebb3f0f35f3d9b7f3272b7afac1904cc3e3f636a0a6e5877d72c78b7d8"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "winrt_macros"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d88594f878eee84909a5d20cad8bfef8587f9e1473ce81b74fbbd4b12748d662"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+ "winrt_gen",
 ]
 
 [[package]]

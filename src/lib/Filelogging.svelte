@@ -29,8 +29,7 @@
   }
 
   let loggingMsg = ["Start をクリックするとロギングを開始します"];
-  let now = new Date();
-  let filename = String(now.getFullYear()) + String(now.getMonth()+1).padStart(2, '0') + String(now.getDate()).padStart(2, '0') + String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0') + String(now.getSeconds()).padStart(2, '0') + ".tsv"
+  let filename = getFilename();
   let process = null;
   let iid = false;
   let logno = "0";
@@ -39,6 +38,11 @@
   let startStats = '';
   let stopStats = "disabled";
   let canScreenshot = "";
+
+  function getFilename() {
+    let now = new Date();
+    return String(now.getFullYear()) + String(now.getMonth()+1).padStart(2, '0') + String(now.getDate()).padStart(2, '0') + String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0') + String(now.getSeconds()).padStart(2, '0') + ".tsv"
+  }
 
   function addMsg(m) {
     if(m == '') { return; }
@@ -103,6 +107,7 @@
           addMsg(parse[i].replace("\t", ", "));
           if(parse[i].indexOf('育成完了') !== -1) {
             stopLog();
+            filename = getFilename();
           }
         }
       }
@@ -202,7 +207,7 @@
     events = event.events;
   }
 
-  listen('eventrefresh', function(ret) {console.log(ret);
+  listen('eventrefresh', function(ret) {
     event_refresh(ret.payload);
   });
 

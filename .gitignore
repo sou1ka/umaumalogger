@@ -13,7 +13,7 @@ dist-ssr
 *.local
 
 # Editor directories and files
-.vscode/*
+.vscode
 !.vscode/extensions.json
 .idea
 .DS_Store
@@ -30,3 +30,8 @@ out
 bin
 temp
 screenshot
+src/App2.svelte
+src/lib/console.svelte
+src/lib/Events.svelte
+src/lib/Logs.svelte
+src/lib/Screenshot.svelte
