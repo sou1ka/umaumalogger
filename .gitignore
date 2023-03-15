@@ -35,3 +35,4 @@ src/lib/console.svelte
 src/lib/Events.svelte
 src/lib/Logs.svelte
 src/lib/Screenshot.svelte
+src/lib/Test.svelte

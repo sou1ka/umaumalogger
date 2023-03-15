@@ -1,14 +1,9 @@
 <script>
-  import Filelogging from './lib/Filelogging.svelte'
+  import View from './lib/View.svelte'
 </script>
 
 <main class="container">
-  <h1>UmaUmaLogger</h1>
-
-  <div class="row">
-    <Filelogging />
-  </div>
-
+  <View />
 </main>
 
 <style>

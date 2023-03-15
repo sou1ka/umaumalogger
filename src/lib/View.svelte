@@ -1,8 +1,15 @@
 <script>
+  document.oncontextmenu = function () { return false; }
+  window.onresize = function() {
+      let width = document.querySelector('.ikusei div').clientWidth;
+      document.querySelectorAll('.ikusei_subchart canvas')[0].style.width = width + 'px';
+      document.querySelectorAll('.ikusei_subchart canvas')[1].style.width = width + 'px';
+  }
+
   import { invoke } from "@tauri-apps/api/tauri"
   import { Command } from '@tauri-apps/api/shell'
   import { convertFileSrc } from '@tauri-apps/api/tauri';
-  import { listen, emit } from '@tauri-apps/api/event'
+  import { listen, emit } from '@tauri-apps/api/event';
 
   import Button, { Group, Label, Icon } from '@smui/button';
   import Textfield from '@smui/textfield';
@@ -14,19 +21,35 @@
     Body,
     Row,
     Cell,
-    SortValue,
   } from '@smui/data-table';
-  import IconButton from '@smui/icon-button';
-  import Dialog, { Header, Title, Content } from '@smui/dialog';
-  import LayoutGrid from '@smui/layout-grid';
-  import Paper, { Subtitle } from '@smui/paper';
+  import ImageList, { Item, Image } from '@smui/image-list';
+  import Paper, { Title, Content } from '@smui/paper';
 
-  import { WebviewWindow } from '@tauri-apps/api/window';
-  function viewWindow() {
-    new WebviewWindow('graph', {
-      url: 'src/graph.html'
-    });
-  }
+  import { Line, Radar, Bar } from 'svelte-chartjs';
+  import {
+      Chart as ChartJS,
+      Title as Ctitle,
+      Tooltip as Ctip,
+      Legend,
+      BarElement,
+      LineElement,
+      LinearScale,
+      PointElement,
+      CategoryScale,
+      RadialLinearScale,
+  } from 'chart.js';
+
+  ChartJS.register(
+      Ctitle,
+      Ctip,
+      Legend,
+      BarElement,
+      LineElement,
+      LinearScale,
+      PointElement,
+      CategoryScale,
+      RadialLinearScale
+  );
 
   let loggingMsg = ["Start をクリックするとロギングを開始します"];
   let filename = getFilename();
@@ -50,11 +73,6 @@
     let tmp = loggingMsg.concat();
     tmp.push(m);
     loggingMsg = tmp;
-    
-    let ti = setTimeout(function() {
-      document.querySelector(".console li:last-child").scrollIntoView();
-      clearTimeout(ti);
-    }, 100);
   }
 
   async function startLog() {
@@ -105,6 +123,7 @@
 
         for(let i = 1, size = parse.length; i < size; i++) {
           addMsg(parse[i].replace("\t", ", "));
+          drowChart(filename);
           if(parse[i].indexOf('育成完了') !== -1) {
             stopLog();
             filename = getFilename();
@@ -151,6 +170,8 @@
       };
       items.push(line);
     }
+
+    items.reverse();
   }
   get_loglists(true);
 
@@ -211,74 +232,93 @@
     event_refresh(ret.payload);
   });
 
-  // app setting
-  let sort = 'create_date';
-  let sortDirection = 'ascending';
-  function handleSort() {
-    items.sort((a, b) => {
-      const [aVal, bVal] = [a[sort], b[sort]][
-        sortDirection === 'ascending' ? 'slice' : 'reverse'
-      ]();
-      if (typeof aVal === 'string' && typeof bVal === 'string') {
-        return aVal.localeCompare(bVal);
-      }
-      return Number(aVal) - Number(bVal);
-    });
-    items = items;
-  }
+  // グラフ初期値
 
-  let open = false;
-  let chartIkusei;
-  let chartResult;
-  
-  async function rowClick(filename) {
-    if(!chartIkusei) {
-      chartIkusei = new Chart(document.getElementById('chart_ikusei'), {
-        type: "line",
-        data: {
-          type: 'line',
-          data: {
-            labels: ['1', '2'],
-            datasets: [{
-              label: 'dummy',
-              data: [1, 2]
-            }]
-          }
-        },
-        options: {
-          responsive: true
-        }
-      });
-      chartResult = new Chart(document.getElementById('chart_result'), {
-        type: "radar",
-        data: {
-          labels: ['スピード', 'スタミナ', 'パワー', '根性', '賢さ'],
-          datasets: [{
-            data: [100, 100, 100, 100, 100],
-            borderColor: ["#1565C0", "#C62828", "#F9A825", "#6A1B9A", "#558B2F"],
-            backgroundColor: "rgba(200, 20, 80, 0.4)",
-            pointRadius: 10,
-            pointHoverRadius: 20
-          }]
-        },
-        options: {
-          plugins: {
-            legend: {
-              display: false
-            }
-          },
-          responsive: true,
-          scale: {
-            beginAtZero: true,
-            max: 1200,
-            min: 0,
-            stepSize: 100
-          }
-        }
-      });
-    }
+  let chartIkusei = {
+    labels: ['ジュニア級テビュー前'],
+    datasets: [{
+      label: 'スピード',
+      data: [100],
+      borderColor: '#1565C0',
+      backgroundColor: '#42A5F5',
+      pointStyle: 'circle',
+      pointHoverRadius: 10
+    }, {
+      label: 'スタミナ',
+      data: [100],
+      borderColor: '#C62828',
+      backgroundColor: '#EF5350',
+      pointStyle: 'circle',
+      pointHoverRadius: 10
+    }, {
+      label: 'パワー',
+      data: [100],
+      borderColor: '#F9A825',
+      backgroundColor: '#FFEE58',
+      pointStyle: 'circle',
+      pointHoverRadius: 10
+    }, {
+      label: '根性',
+      data: [100],
+      borderColor: '#6A1B9A',
+      backgroundColor: '#AB47BC',
+      pointStyle: 'circle',
+      pointHoverRadius: 10
+    }, {
+      label: '賢さ',
+      data: [100],
+      borderColor: '#558B2F',
+      backgroundColor: '#9CCC65',
+      pointStyle: 'circle',
+      pointHoverRadius: 10
+    }, {
+      label: 'スキルPt',
+      data: [120],
+      borderColor: '#424242',
+      backgroundColor: '#BDBDBD',
+      pointStyle: 'circle',
+      pointHoverRadius: 10
+    }]
+  };
 
-    open = true;
+  let chartResult = {
+    labels: ['スピード', 'スタミナ', 'パワー', '根性', '賢さ'],
+    datasets: [{
+      data: [100, 100, 100, 100, 100],
+      borderColor: "#1565C0",
+      backgroundColor: 'rgb(71, 225, 167, .7)',
+      pointRadius: 8,
+      pointHoverRadius: 10
+    }]
+  };
+
+  let chartYaruki = {
+    labels: ['絶好調', '好調', '普通', '不調', '絶不調', 'やる気ダウン'],
+    datasets: [{
+      label: '',
+      data: [0, 0, 0, 0, 0, 0],
+      backgroundColor: [
+        'rgba(245, 127, 158, 0.7)',
+        'rgba(245, 170, 65, 0.7)',
+        'rgba(245, 214, 24, 0.7)',
+        'rgba(15, 171, 245, 0.7)',
+        'rgba(200, 128, 245, 0.7)',
+        'rgba(100, 100, 100, 0.7)',
+      ],
+      borderWidth: 2,
+      borderColor: [
+        'rgba(245, 127, 158, 1)',
+        'rgba(245, 170, 65, 1)',
+        'rgba(245, 214, 24, 1)',
+        'rgba(15, 171, 245, 1)',
+        'rgba(200, 128, 245, 1)',
+        'rgba(100, 100, 100, 1)',
+      ]
+    }]
+  };
+
+  // グラフ表示
+  async function drowChart(filename) {
     let ret = await invoke("get_filelog", {filename});
     let data = ret.split("\n");
     let labels = []; // csvの0列がラベル（シーズン、X軸）
@@ -288,22 +328,26 @@
     let mentals = []; // 根性 csv[4]
     let intellis = []; // 賢さ csv[5]
     let skillpts = []; // スキルPt csv[6]
+    let yarukis = []; // やる気 csv[7]
 
     for(let i in data) {
-      if(i == 0) { continue; }
+      if(Number(i) == 0) { continue; }
       if(!data[i]) { continue; }
 
       let csv = data[i].split("\t");
-      labels.push(csv[0]);
+      labels.push(csv[0].replace(/[^クラシック|ジュニア|シニア|開催中|育成完了]/, "").replace("ジュニア", "Jr.").replace("クラシック", "Cl.").replace("シニア", "Sr."));
       speeds.push(csv[1]);
       staminas.push(csv[2]);
       powers.push(csv[3]);
       mentals.push(csv[4]);
       intellis.push(csv[5]);
       skillpts.push(csv[6]);
+      if(csv[7]) {
+        yarukis.push(csv[7]);
+      }
     }
 
-    chartIkusei.data = {
+    chartIkusei = {
       labels: labels,
       datasets: [{
         label: 'スピード',
@@ -349,7 +393,6 @@
         pointHoverRadius: 10
       }]
     };
-    chartIkusei.update();
 
     let radarVal = [];
     radarVal.push(Number(speeds[speeds.length-1]));
@@ -357,116 +400,202 @@
     radarVal.push(Number(powers[powers.length-1]));
     radarVal.push(Number(mentals[mentals.length-1]));
     radarVal.push(Number(intellis[intellis.length-1]));
-    chartResult.data.datasets[0].data = radarVal;
-    chartResult.options.scale.max = Math.max.apply(null, radarVal);
-    chartResult.update();
+    chartResult.datasets[0].data = radarVal;
+
+    if(yarukis) {
+      let yarukidata = [0, 0, 0, 0, 0, 0];
+      let m = { '絶好調': 4, '好調': 3, '普通': 2, '不調': 1, '絶不調': 0 };
+      let past = 3;
+
+      for(let i in yarukis) {
+        let y = yarukis[i];
+        let n = m[y];
+
+        if(y == '絶好調') {
+          yarukidata[0] = yarukidata[0]+=1;
+        } else if(y == '好調') {
+          yarukidata[1] = yarukidata[1]+=1;
+        } else if(y == '普通') {
+          yarukidata[2] = yarukidata[2]+=1;
+        } else if(y == '不調') {
+          yarukidata[3] = yarukidata[3]+=1;
+        } else if(y == '絶不調') {
+          yarukidata[4] = yarukidata[4]+=1;
+        }
+
+        if(n > past) {
+          yarukidata[5] = yarukidata[5]+=1;
+        }
+
+        past = n;
+      }
+
+      chartYaruki.datasets[0].data = yarukidata;
+    }
+
   }
+
+let yaruki = {
+  labels: ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Orange'],
+  datasets: [
+    {
+      label: '% of Votes',
+      data: [12, 19, 3, 5, 2, 3],
+      backgroundColor: [
+        'rgba(255, 134,159,0.4)',
+        'rgba(98,  182, 239,0.4)',
+        'rgba(255, 218, 128,0.4)',
+        'rgba(113, 205, 205,0.4)',
+        'rgba(170, 128, 252,0.4)',
+        'rgba(255, 177, 101,0.4)',
+      ],
+      borderWidth: 2,
+      borderColor: [
+        'rgba(255, 134, 159, 1)',
+        'rgba(98,  182, 239, 1)',
+        'rgba(255, 218, 128, 1)',
+        'rgba(113, 205, 205, 1)',
+        'rgba(170, 128, 252, 1)',
+        'rgba(255, 177, 101, 1)',
+      ],
+    },
+  ],
+};
 </script>
 
-<div class="tab">
-  <TabBar tabs={['Console', 'List', 'Events', 'Screenshot']} let:tab bind:active>
-    <Tab {tab} minWidth>
-      <Label>{tab}</Label>
-    </Tab>
-  </TabBar>
-</div>
-
-{#if active === 'Console'}
-<div class="row">
-  <Textfield variant="outlined" bind:value={filename} label="Filename"></Textfield>
+<header>
+  <h1>UmaUmaLogger</h1>
+  <div>
+    <Textfield variant="outlined" bind:value={filename} label="Filename"></Textfield>
+  </div>
+  <div>
     <Wrapper>
-      <Button on:click={startLog} variant="raised" disabled="{startStats}">
+      <Button on:click={startLog} disabled="{startStats}">
         <Icon class="fa-solid fa-play"></Icon>
-        <Label>Start</Label>
       </Button>
       <Tooltip>ロギングを開始します</Tooltip>
     </Wrapper>
     <Wrapper>
-      <Button on:click={stopLog} variant="raised" disabled="{stopStats}">
-        <Label>Stop</Label>
+      <Button on:click={stopLog} disabled="{stopStats}">
         <Icon class="fa-solid fa-stop"></Icon>
       </Button>
       <Tooltip>ロギングを停止します</Tooltip>
-  </Wrapper>
+    </Wrapper>
+    <Wrapper>
+      <Button on:click={take_screenshot} disabled="{canScreenshot}">
+        <Icon class="fa-solid fa-image"></Icon>
+      </Button>
+      <Tooltip>スクリーンショットを撮ります</Tooltip>
+    </Wrapper>
+  </div>
+</header>
+
+<section>
+<div class="ikussei_chart">
+  <Line
+      data={chartIkusei}
+      height={260}
+      options={{ maintainAspectRatio: false, responsive: true }}
+  />
 </div>
 
-<!--
-<p><small>育成ステータスをロギングします。
-  シーズン、スピード、スタミナ、パワー、根性、賢さ、スキルPtを取得します。
-  OCRで認識するので、文字によっては正しく取れないかもしれません（8が3になったりします）</small></p>
--->
+<div class="ikusei"><div></div><div></div></div>
+<div class="ikusei">
+  <div class="ikusei_log">
+    <TabBar tabs={['Console', 'Logs']} let:tab bind:active>
+      <Tab {tab} minWidth>
+        <Label>{#if tab == 'Console'}コンソール{:else}ログリスト{/if}</Label>
+      </Tab>
+    </TabBar>
 
-<hr />
+    {#if active == 'Console'}
+      <div class="console">
+        <ul>
+        {#each loggingMsg as msg}
+          <li>{msg}</li>
+        {/each}
+        </ul>
+      </div>
+    {:else if active == 'Logs' }
+      <div class="logs">
+        <DataTable
+          table$aria-label="Log list"
+          style="width: 100%;"
+        >
+        <Head>
+          <Row>
+            <Cell columnId="filename" style="width: 100%;">
+              <Label>File Name</Label>
+            </Cell>
+            <Cell columnId="create_date">
+              <Label>Create Date</Label>
+            </Cell>
+          </Row>
+        </Head>
+        <Body>
+          {#each items as item }
+            <Row>
+              <Cell on:click={() => drowChart(item.filename)}>{item.filename}</Cell>
+              <Cell on:click={() => drowChart(item.filename)}>{item.create_date}</Cell>
+            </Row>
+          {/each}
+        </Body>
+        </DataTable>
+      </div>
+    {/if}
+  </div>
 
-<div class="console">
-  <ul>
-  {#each loggingMsg as msg}
-    <li>{msg}</li>
-  {/each}
-  </ul>
+  <div class="ikusei_subchart">
+      <div>
+          <Radar 
+              data={chartResult}
+              options={{
+                maintainAspectRatio: false,
+                responsive: true,
+                plugins: {
+                  legend: {
+                    display: false
+                  }
+                },
+                scale: {
+                  beginAtZero: true,
+                  max: 1200,
+                  min: 0,
+                  stepSize: 100
+                }
+              }}
+          />
+      </div>
+
+      <div>
+          <Bar 
+              data={chartYaruki}
+              options={{
+                maintainAspectRatio: false,
+                responsive: true,
+                indexAxis: 'y',
+                plugins: {
+                  legend: {
+                    display: false
+                  }
+                }
+              }}
+          />
+      </div>
+  </div>
 </div>
+</section>
 
-{:else if active === 'List'}
-
-<div>
-  <!--
-  <Wrapper>
-    <Button on:click={get_loglists} variant="raised">
-      <Icon class="material-icons">refresh</Icon>
-      <Label>Reload</Label>
-    </Button>
-    <Tooltip>ログをリロードします</Tooltip>
-  </Wrapper>
-  -->
-  <hr />
-  <DataTable
-    sortable
-    bind:sort
-    bind:sortDirection
-    on:SMUIDataTable:sorted={handleSort}
-    table$aria-label="Log list"
-    style="width: 100%;"
-  >
-  <Head>
-    <Row>
-      <Cell columnId="filename" style="width: 100%;">
-        <Label>File Name</Label>
-        <!-- For non-numeric columns, icon comes second. -->
-        <IconButton class="fas fa-duotone fa-arrow-down"></IconButton>
-      </Cell>
-      <Cell columnId="create_date">
-        <Label>Create Date</Label>
-        <IconButton class="fas fa-duotone fa-arrow-up"></IconButton>
-      </Cell>
-    </Row>
-  </Head>
-  <Body>
-    {#each items as item }
-      <Row>
-        <Cell on:click={() => rowClick(item.filename)}>{item.filename}</Cell>
-        <Cell on:click={() => rowClick(item.filename)}>{item.create_date}</Cell>
-      </Row>
-    {/each}
-  </Body>
-  </DataTable>
-
-</div>
-
-{:else if active === 'Events'}
-
-<div class="row">
-  <Textfield variant="outlined" bind:value={event_name} label="イベント名"></Textfield>
-  <Textfield variant="outlined" bind:value={musumename} label="育成ウマ娘"></Textfield>
+<section>
+<div class="events">
+  <Textfield bind:value={event_name} label="イベント名"></Textfield>
+  <Textfield bind:value={musumename} label="育成ウマ娘"></Textfield>
   <Wrapper>
     <Button on:click={check_events} variant="raised">
       <Icon class="fas fa-light fa-list-check"></Icon>
-      <Label>Check</Label>
     </Button>
     <Tooltip>表示中のイベントをチェックします</Tooltip>
   </Wrapper>
-</div>
-
-<div class="paper-container">
   <Title>{eventName}</Title>
   {#each events as ev}
     <Paper variant="unelevated">
@@ -477,7 +606,7 @@
   {/each}
 </div>
 
-{:else if active === 'Screenshot'}
+<div class="screenshot">
   <Group variant="raised">
     <Wrapper>
       <Button on:click={take_screenshot} variant="raised" disabled="{canScreenshot}">
@@ -495,22 +624,17 @@
     </Wrapper>
   </Group>
 
-  <hr />
   <div class="screenshots">
-  <LayoutGrid>
+  <ImageList>
     {#each imagelist as img, i}
-      <Cell on:click={imageview(img.filename)}>
-        <img src={convertFileSrc("screenshot/" + img.filename) } width="90" />
-      </Cell>
+      <Item on:click={imageview(img.filename)}>
+        <Image
+          src="{convertFileSrc("screenshot/" + img.filename)}"
+          width="5"
+        />
+      </Item>
     {/each}
-  </LayoutGrid>
+  </ImageList>
   </div>
-{/if}
-
-<Dialog bind:open sheet aria-describedby="sheet-content">
-  <Content id="sheet-content">
-    <IconButton action="close" class="fa-solid fa-circle-xmark"></IconButton>
-    <canvas class="chart" id="chart_ikusei"></canvas>
-    <canvas class="chart" id="chart_result"></canvas>
-  </Content>
-</Dialog>
+</div>
+</section>
