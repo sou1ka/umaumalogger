@@ -146,12 +146,9 @@ header>div>button:first-of-type {
 }
 
 .events {
-  margin-top: 10px;
   padding-left: 10px;
-  min-height: 400px;
   overflow-y: auto;
   background: #fafafa;
-  zoom: 85%;
 }
 
 .events>label {
@@ -169,11 +166,11 @@ header>div>button:first-of-type {
 }
 
 .events>label:first-of-type {
-  width: 300px;
+  width: 95%;
 }
 
 .events>label {
-  width: 170px;
+  width: 50%;
 }
 
 .events div {
@@ -183,17 +180,18 @@ header>div>button:first-of-type {
 
 .screenshot {
   margin-top: 10px;
+  padding-top: 10px;
   background: #fafafa;
   zoom: 85%;
 }
 
 .screenshots {
   height: 400px;
-  margin-top: 5px;
+  margin-top: 10px;
   overflow-y: auto;
 }
 
 .screenshots .mdc-image-list__item {
-  width: 150px;
+  width: 100px;
 }
 

@@ -25,7 +25,7 @@
   import ImageList, { Item, Image } from '@smui/image-list';
   import Paper, { Title, Content } from '@smui/paper';
 
-  import { Line, Radar, Bar } from 'svelte-chartjs';
+  import { Line, PolarArea, Bar } from 'svelte-chartjs';
   import {
       Chart as ChartJS,
       Title as Ctitle,
@@ -36,6 +36,7 @@
       LinearScale,
       PointElement,
       CategoryScale,
+      ArcElement,
       RadialLinearScale,
   } from 'chart.js';
 
@@ -48,6 +49,7 @@
       LinearScale,
       PointElement,
       CategoryScale,
+      ArcElement,
       RadialLinearScale
   );
 
@@ -192,11 +194,13 @@
 
   let imagelist = [];
   async function get_imagelist() {
-    let ret = await invoke("get_imagelist");
-    let images = JSON.parse(ret);
+    invoke("get_imagelist").then(function(ret) {
+      let images = JSON.parse(ret);
+      images.reverse();
 
-    imagelist = [];
-    imagelist = images;
+      imagelist = [];
+      imagelist = images;
+    });
   }
   get_imagelist();
 
@@ -233,6 +237,8 @@
   });
 
   // グラフ初期値
+
+  let maxScale = 1600;
 
   let chartIkusei = {
     labels: ['ジュニア級テビュー前'],
@@ -285,8 +291,7 @@
     labels: ['スピード', 'スタミナ', 'パワー', '根性', '賢さ'],
     datasets: [{
       data: [100, 100, 100, 100, 100],
-      borderColor: "#1565C0",
-      backgroundColor: 'rgb(71, 225, 167, .7)',
+      backgroundColor: [ '#42A5F5', '#EF5350', '#FFEE58', '#AB47BC', '#9CCC65' ],
       pointRadius: 8,
       pointHoverRadius: 10
     }]
@@ -347,65 +352,78 @@
       }
     }
 
-    chartIkusei = {
-      labels: labels,
-      datasets: [{
-        label: 'スピード',
-        data: speeds,
-        borderColor: '#1565C0',
-        backgroundColor: '#42A5F5',
-        pointStyle: 'circle',
-        pointHoverRadius: 10
-      }, {
-        label: 'スタミナ',
-        data: staminas,
-        borderColor: '#C62828',
-        backgroundColor: '#EF5350',
-        pointStyle: 'circle',
-        pointHoverRadius: 10
-      }, {
-        label: 'パワー',
-        data: powers,
-        borderColor: '#F9A825',
-        backgroundColor: '#FFEE58',
-        pointStyle: 'circle',
-        pointHoverRadius: 10
-      }, {
-        label: '根性',
-        data: mentals,
-        borderColor: '#6A1B9A',
-        backgroundColor: '#AB47BC',
-        pointStyle: 'circle',
-        pointHoverRadius: 10
-      }, {
-        label: '賢さ',
-        data: intellis,
-        borderColor: '#558B2F',
-        backgroundColor: '#9CCC65',
-        pointStyle: 'circle',
-        pointHoverRadius: 10
-      }, {
-        label: 'スキルPt',
-        data: skillpts,
-        borderColor: '#424242',
-        backgroundColor: '#BDBDBD',
-        pointStyle: 'circle',
-        pointHoverRadius: 10
-      }]
-    };
+    let ikuseiVal = [{
+      label: 'スピード',
+      data: speeds,
+      borderColor: '#1565C0',
+      backgroundColor: '#42A5F5',
+      pointStyle: 'circle',
+      pointHoverRadius: 10
+    }, {
+      label: 'スタミナ',
+      data: staminas,
+      borderColor: '#C62828',
+      backgroundColor: '#EF5350',
+      pointStyle: 'circle',
+      pointHoverRadius: 10
+    }, {
+      label: 'パワー',
+      data: powers,
+      borderColor: '#F9A825',
+      backgroundColor: '#FFEE58',
+      pointStyle: 'circle',
+      pointHoverRadius: 10
+    }, {
+      label: '根性',
+      data: mentals,
+      borderColor: '#6A1B9A',
+      backgroundColor: '#AB47BC',
+      pointStyle: 'circle',
+      pointHoverRadius: 10
+    }, {
+      label: '賢さ',
+      data: intellis,
+      borderColor: '#558B2F',
+      backgroundColor: '#9CCC65',
+      pointStyle: 'circle',
+      pointHoverRadius: 10
+    }, {
+      label: 'スキルPt',
+      data: skillpts,
+      borderColor: '#424242',
+      backgroundColor: '#BDBDBD',
+      pointStyle: 'circle',
+      pointHoverRadius: 10
+    }];
 
-    let radarVal = [];
-    radarVal.push(Number(speeds[speeds.length-1]));
-    radarVal.push(Number(staminas[staminas.length-1]));
-    radarVal.push(Number(powers[powers.length-1]));
-    radarVal.push(Number(mentals[mentals.length-1]));
-    radarVal.push(Number(intellis[intellis.length-1]));
+    if(JSON.stringify(ikuseiVal) != JSON.stringify(chartIkusei.datasets)) {
+      chartIkusei = {
+        labels: labels,
+        datasets: ikuseiVal
+      };
+    }
+
+    let radarVal = [100, 100, 100, 100, 100];
+
+    if(speeds.length > 0) {
+      radarVal[0] = Number(speeds[speeds.length-1]);
+      radarVal[1] = Number(staminas[staminas.length-1]);
+      radarVal[2] = Number(powers[powers.length-1]);
+      radarVal[3] = Number(mentals[mentals.length-1]);
+      radarVal[4] = Number(intellis[intellis.length-1]);
+      //maxScale = Math.max.apply(null, radarVal) + 100;
+    }
+
     chartResult.datasets[0].data = radarVal;
+
+    //if(maxScale <= 700) {
+    //  maxScale = 1200;
+    //}
 
     if(yarukis) {
       let yarukidata = [0, 0, 0, 0, 0, 0];
       let m = { '絶好調': 4, '好調': 3, '普通': 2, '不調': 1, '絶不調': 0 };
-      let past = 3;
+      let past = 2;
 
       for(let i in yarukis) {
         let y = yarukis[i];
@@ -423,7 +441,7 @@
           yarukidata[4] = yarukidata[4]+=1;
         }
 
-        if(n > past) {
+        if(n < past) {
           yarukidata[5] = yarukidata[5]+=1;
         }
 
@@ -435,32 +453,6 @@
 
   }
 
-let yaruki = {
-  labels: ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Orange'],
-  datasets: [
-    {
-      label: '% of Votes',
-      data: [12, 19, 3, 5, 2, 3],
-      backgroundColor: [
-        'rgba(255, 134,159,0.4)',
-        'rgba(98,  182, 239,0.4)',
-        'rgba(255, 218, 128,0.4)',
-        'rgba(113, 205, 205,0.4)',
-        'rgba(170, 128, 252,0.4)',
-        'rgba(255, 177, 101,0.4)',
-      ],
-      borderWidth: 2,
-      borderColor: [
-        'rgba(255, 134, 159, 1)',
-        'rgba(98,  182, 239, 1)',
-        'rgba(255, 218, 128, 1)',
-        'rgba(113, 205, 205, 1)',
-        'rgba(170, 128, 252, 1)',
-        'rgba(255, 177, 101, 1)',
-      ],
-    },
-  ],
-};
 </script>
 
 <header>
@@ -502,9 +494,9 @@ let yaruki = {
 <div class="ikusei"><div></div><div></div></div>
 <div class="ikusei">
   <div class="ikusei_log">
-    <TabBar tabs={['Console', 'Logs']} let:tab bind:active>
+    <TabBar tabs={['Console', 'Logs', 'Events']} let:tab bind:active>
       <Tab {tab} minWidth>
-        <Label>{#if tab == 'Console'}コンソール{:else}ログリスト{/if}</Label>
+        <Label>{#if tab == 'Console'}コンソール{:else if tab == 'Logs'}ログリスト{:else if tab == 'Events'}イベントチェック{/if}</Label>
       </Tab>
     </TabBar>
 
@@ -542,12 +534,31 @@ let yaruki = {
         </Body>
         </DataTable>
       </div>
+    {:else if active == 'Events'}
+      <div class="events">
+        <Textfield bind:value={event_name} label="イベント名"></Textfield>
+        <Textfield bind:value={musumename} label="育成ウマ娘"></Textfield>
+        <Wrapper>
+          <Button on:click={check_events} variant="raised">
+            <Icon class="fas fa-solid fa-magnifying-glass"></Icon>
+          </Button>
+          <Tooltip>表示中のイベントをチェックします</Tooltip>
+        </Wrapper>
+        <Title>{eventName}</Title>
+        {#each events as ev}
+          <Paper variant="unelevated">
+            <Title>{ev.select}</Title>
+            <Content>{ev.value}</Content>
+          </Paper>
+          <hr />
+        {/each}
+      </div>
     {/if}
   </div>
 
   <div class="ikusei_subchart">
       <div>
-          <Radar 
+          <PolarArea 
               data={chartResult}
               options={{
                 maintainAspectRatio: false,
@@ -559,7 +570,7 @@ let yaruki = {
                 },
                 scale: {
                   beginAtZero: true,
-                  max: 1200,
+                  max: maxScale,
                   min: 0,
                   stepSize: 100
                 }
@@ -587,25 +598,6 @@ let yaruki = {
 </section>
 
 <section>
-<div class="events">
-  <Textfield bind:value={event_name} label="イベント名"></Textfield>
-  <Textfield bind:value={musumename} label="育成ウマ娘"></Textfield>
-  <Wrapper>
-    <Button on:click={check_events} variant="raised">
-      <Icon class="fas fa-light fa-list-check"></Icon>
-    </Button>
-    <Tooltip>表示中のイベントをチェックします</Tooltip>
-  </Wrapper>
-  <Title>{eventName}</Title>
-  {#each events as ev}
-    <Paper variant="unelevated">
-      <Title>{ev.select}</Title>
-      <Content>{ev.value}</Content>
-    </Paper>
-    <hr />
-  {/each}
-</div>
-
 <div class="screenshot">
   <Group variant="raised">
     <Wrapper>
@@ -630,7 +622,6 @@ let yaruki = {
       <Item on:click={imageview(img.filename)}>
         <Image
           src="{convertFileSrc("screenshot/" + img.filename)}"
-          width="5"
         />
       </Item>
     {/each}
