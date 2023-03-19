@@ -125,12 +125,19 @@
 
         for(let i = 1, size = parse.length; i < size; i++) {
           addMsg(parse[i].replace("\t", ", "));
-          drowChart(filename);
-          if(parse[i].indexOf('育成完了') !== -1) {
+          
+          if(String(parse[i]).indexOf('育成完了') !== -1) {
             stopLog();
-            filename = getFilename();
+            let tid;
+            tid = setTimeout(function() {
+              filename = getFilename();
+              clearTimeout(tid);
+            }, 1000);
+            break;
           }
         }
+
+        drowChart(filename);
       }
     }
 
@@ -609,7 +616,6 @@
     </Wrapper>
     <Wrapper>
       <Button on:click={show_screenshotdir} variant="raised">
-        <Label>Folder Open</Label>
         <Icon class="fa-regular fa-folder-open"></Icon>
       </Button>
       <Tooltip>スクリーンショットフォルダを開きます</Tooltip>
