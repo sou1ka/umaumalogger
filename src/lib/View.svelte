@@ -89,7 +89,12 @@
     startStats = "disabled";
     stopStats = "";
 
-    get_loglists(true);
+    let tid;
+    tid = setTimeout(function() {
+      console.log("getlog start");
+      get_loglists(true);
+      clearTimeout(tid);
+    }, 1000);
   //  iid = setInterval(get_stdoutfile, 2000);
 
     listen('logrefresh', function(ret) {
@@ -132,7 +137,7 @@
             tid = setTimeout(function() {
               filename = getFilename();
               clearTimeout(tid);
-            }, 1000);
+            }, 2000);
             break;
           }
         }
@@ -164,23 +169,25 @@
 
   async function get_loglists(force) {
     if(active != 'List' && force !== true) { return; }
-
+console.log('get_loglist');
     items = [];
     let ret = await invoke("get_loglists");
     let lists = JSON.parse(ret);
+    let temp = [];
 
     if(!lists) { return; }
-
+    console.log(lists);
     for(let i in lists) {
       let dt = new Date(lists[i].create_timestamp * 1000);
       let line = {
         filename: lists[i].filename,
         create_date: dt.getFullYear() + '/' + String((dt.getMonth()+1)).padStart(2, '0') + '/' + String(dt.getDate()).padStart(2, '0') + ' ' + String(dt.getHours()).padStart(2, '0') + ':' + String(dt.getMinutes()).padStart(2, '0')
       };
-      items.push(line);
+      temp.push(line);
     }
 
-    items.reverse();
+    temp.reverse();
+    items = temp;
   }
   get_loglists(true);
 
@@ -209,7 +216,10 @@
       imagelist = images;
     });
   }
-  get_imagelist();
+  let tid;
+  tid = setTimeout(function() {
+    get_imagelist();
+  }, 1000);
 
   async function show_screenshotdir() {
     let path = await invoke("get_path");
