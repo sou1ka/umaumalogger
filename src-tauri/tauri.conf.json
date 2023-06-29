@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "UmaUmaLogger",
-    "version": "0.9.5"
+    "version": "0.9.7"
   },
   "tauri": {
     "allowlist": {
@@ -56,7 +56,7 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "identifier": "com.tauri.release",
+      "identifier": "com.sou1ka.tauri.umaumalogger",
       "longDescription": "",
       "macOS": {
         "entitlements": null,
@@ -83,7 +83,7 @@
     "windows": [
       {
         "fullscreen": false,
-        "height": 620,
+        "height": 820,
         "minHeight": 400, 
         "resizable": true,
         "title": "UmaUmaLogger",

@@ -63,6 +63,7 @@
   let startStats = '';
   let stopStats = "disabled";
   let canScreenshot = "";
+  let page = 1;
 
   function getFilename() {
     let now = new Date();
@@ -91,7 +92,6 @@
 
     let tid;
     tid = setTimeout(function() {
-      console.log("getlog start");
       get_loglists(true);
       clearTimeout(tid);
     }, 1000);
@@ -169,14 +169,13 @@
 
   async function get_loglists(force) {
     if(active != 'List' && force !== true) { return; }
-console.log('get_loglist');
     items = [];
     let ret = await invoke("get_loglists");
     let lists = JSON.parse(ret);
     let temp = [];
 
     if(!lists) { return; }
-    console.log(lists);
+
     for(let i in lists) {
       let dt = new Date(lists[i].create_timestamp * 1000);
       let line = {
@@ -196,7 +195,7 @@ console.log('get_loglist');
     let ret = await invoke("take_screenshot");
     canScreenshot = "";
     if(ret) {
-      get_imagelist();
+      get_imagelist(1, 1);
     }
   }
 
@@ -207,18 +206,32 @@ console.log('get_loglist');
   }
 
   let imagelist = [];
-  async function get_imagelist() {
-    invoke("get_imagelist").then(function(ret) {
+  async function get_imagelist(page, num) {
+    invoke("get_imagelist", {
+      page: page,
+      num: (num ? num : 0)
+    }).then(async function(ret) {
       let images = JSON.parse(ret);
-      images.reverse();
 
-      imagelist = [];
-      imagelist = images;
+      if(num) {
+        imagelist = images.concat(imagelist);
+      } else {
+        imagelist = imagelist.concat(images);
+        imagelist = Array.from(new Set(imagelist)); // unique
+
+        if(images.length == 20) {
+          tid = setTimeout(async function() {
+            clearInterval(tid);
+            get_imagelist(page+=1);
+          }, 500);
+        }
+      }
     });
   }
   let tid;
   tid = setTimeout(function() {
-    get_imagelist();
+    clearInterval(tid);
+    get_imagelist(1);
   }, 1000);
 
   async function show_screenshotdir() {

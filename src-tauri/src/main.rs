@@ -91,12 +91,20 @@ fn take_screenshot() -> String {
 }
 
 #[tauri::command]
-fn get_imagelist() -> String {
+fn get_imagelist(page: usize, num: usize) -> String {
     let path: &str = &format!("{}\\screenshot\\", get_currentpath());
-    let lists: Vec<String> = read_dir(path).unwrap();
+    let mut lists: Vec<String> = read_dir(path).unwrap();
+    lists.reverse();
+    let size = lists.len();
     let mut arr: Vec<String> = Vec::new();
+    let base: usize = 20;
+    let limit: usize = if num == 0 { page * base } else { num };
+    let start: usize = if num == 0 { limit - base } else { 0 };
 
-    for item in lists {
+    for i in start..limit {
+        if size <= i.into() { break; }
+
+        let item = &lists[i];
         let mut line: HashMap<&str, String> = HashMap::new();
         line.insert("filename", (&item).to_string());
         let serialized: String = serde_json::to_string(&line).unwrap();
