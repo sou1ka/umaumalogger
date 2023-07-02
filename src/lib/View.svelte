@@ -220,8 +220,9 @@
         imagelist = Array.from(new Set(imagelist)); // unique
 
         if(images.length == 20) {
-          tid = setTimeout(async function() {
-            clearInterval(tid);
+          let ttid;
+          ttid = setTimeout(async function() {
+            clearInterval(ttid);
             get_imagelist(page+=1);
           }, 500);
         }

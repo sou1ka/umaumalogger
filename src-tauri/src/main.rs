@@ -217,10 +217,17 @@ fn main() {
 
             let app_handle = app.app_handle();
             app.listen_global("logcheck", move |event| {
-                let arg: HashMap<&str, &str> = serde_json::from_str(event.payload().unwrap()).unwrap();
+                println!("TEST: {}", event.payload().unwrap());
+                let a: Vec<_> = event.payload().unwrap().split(",").collect();
+                let logno = a[0].replace("\\", "").replace("\"{\"lognoStr\":\"", "").replace("\"", "");
+                let filename = a[1].replace("\\", "").replace("\"filename\":\"", "").replace("\"}\"", "");
+                println!("logno: {}, filename: {}", logno, filename);
+                //let arg: HashMap<&str, &str> = serde_json::from_str(event.payload().unwrap()).unwrap();
+                //println!("logcheck1: {:?}", arg);
                 std::thread::sleep(std::time::Duration::from_secs(1));
-            //    println!("logcheck {:?}", arg);
-                app_handle.emit_all("logrefresh", get_filelog_lastline(arg.get("lognoStr").unwrap(), arg.get("filename").unwrap())).unwrap();
+                //println!("logcheck2: {:?}", arg);
+                //println!("logno: {}, filename: {}", logno, filename);
+                app_handle.emit_all("logrefresh", get_filelog_lastline(&logno, &filename)).unwrap();
             });
             //app.manage(EventIdValue(eid.to_owned().to_string()));
             //app.listen_global("logcheck-stop", move |event| {
