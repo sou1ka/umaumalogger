@@ -132,12 +132,12 @@
           addMsg(parse[i].replace("\t", ", "));
           
           if(String(parse[i]).indexOf('育成完了') !== -1) {
-            stopLog();
             let tid;
             tid = setTimeout(function() {
+              stopLog();
               filename = getFilename();
               clearTimeout(tid);
-            }, 2000);
+            }, 3000);
             break;
           }
         }
@@ -245,7 +245,9 @@
   let eventName = '';
   let event_name = '';
   let events = [];
-  async function check_events() {
+  async function check_events(e) {
+    if(e.key !== undefined && e.key !== 'Enter') { return; }
+
     let ret = await invoke("get_eventvalue", {
       musumename: musumename,
       eventname: event_name,
@@ -567,8 +569,8 @@
       </div>
     {:else if active == 'Events'}
       <div class="events">
-        <Textfield bind:value={event_name} label="イベント名"></Textfield>
-        <Textfield bind:value={musumename} label="育成ウマ娘"></Textfield>
+        <Textfield bind:value={event_name} label="イベント名" on:keydown={check_events}></Textfield>
+        <Textfield bind:value={musumename} label="育成ウマ娘" on:keydown={check_events}></Textfield>
         <Wrapper>
           <Button on:click={check_events} variant="raised">
             <Icon class="fas fa-solid fa-magnifying-glass"></Icon>
@@ -579,7 +581,7 @@
         {#each events as ev}
           <Paper variant="unelevated">
             <Title>{ev.select}</Title>
-            <Content>{ev.value}</Content>
+            <Content>{@html ev.value.replaceAll('\\n', '<br />')}</Content>
           </Paper>
           <hr />
         {/each}
