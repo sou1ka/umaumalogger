@@ -135,7 +135,7 @@
             let tid;
             tid = setTimeout(function() {
               stopLog();
-              filename = getFilename();
+              get_loglists();
               clearTimeout(tid);
             }, 3000);
             break;
