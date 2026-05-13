@@ -12,11 +12,17 @@ use std::fs;
 use std::os::windows::fs::MetadataExt;
 use std::path::Path;
 use std::collections::HashMap;
-use std::time::SystemTime;
+use std::sync::{Arc, Mutex};
+use std::time::{SystemTime, Duration};
+use notify::{Watcher, RecursiveMode};
 use chrono::Utc;
-use easy_http_request::DefaultHttpRequest;
 
 mod screenshot;
+
+struct LogWatchState {
+    watcher: Option<notify::RecommendedWatcher>,
+    logno: Arc<Mutex<usize>>,
+}
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
@@ -138,14 +144,29 @@ fn get_eventvalue(musumename: &str, eventname: &str, force: bool) -> String {
             }
 
             if event_name != "" {
-                let response = DefaultHttpRequest::get_from_url_str("http://www.plasmasphere.net/archives/umaumalogger/api/event.php?kwd=".to_owned() + &urlencoding::encode(&event_name)+ "&musumename=" + &urlencoding::encode(musumename)).unwrap().send();
-                match response {
-                    Ok(r) => {
-                        if r.status_code == 200 {
-                            ret = String::from_utf8(r.body).unwrap();
+                let url = format!(
+                    "http://www.plasmasphere.net/archives/umaumalogger/api/event.php?kwd={}&musumename={}",
+                    urlencoding::encode(&event_name),
+                    urlencoding::encode(musumename)
+                );
+                match reqwest::blocking::Client::builder()
+                    .timeout(Duration::from_secs(5))
+                    .build() {
+                    Ok(client) => {
+                        match client.get(&url).send() {
+                            Ok(response) => {
+                                if response.status() == 200 {
+                                    if let Ok(text) = response.text() {
+                                        ret = text;
+                                    }
+                                }
+                            },
+                            Err(_e) => {
+                                ret = String::from("");
+                            }
                         }
                     },
-                    Err(_e) => {
+                    Err(_) => {
                         ret = String::from("");
                     }
                 }
@@ -154,6 +175,63 @@ fn get_eventvalue(musumename: &str, eventname: &str, force: bool) -> String {
     }
 
     format!("{}", ret)
+}
+
+#[tauri::command]
+fn start_logwatch(filename: String, state: tauri::State<'_, Mutex<LogWatchState>>, app_handle: tauri::AppHandle) {
+    let mut s = state.lock().unwrap();
+    s.watcher = None;
+    *s.logno.lock().unwrap() = 0;
+
+    let logno = Arc::clone(&s.logno);
+    let app = app_handle.clone();
+    let watch_dir = format!("{}\\out", get_currentpath());
+    let filename_clone = filename.clone();
+
+    let _ = std::fs::create_dir_all(&watch_dir);
+
+    let mut watcher = notify::recommended_watcher(move |res: notify::Result<notify::Event>| {
+        match res {
+            Ok(event) => {
+                let target_matches = event.paths.iter().any(|p| {
+                    p.file_name()
+                        .and_then(|n| n.to_str())
+                        .map(|n| n == filename_clone)
+                        .unwrap_or(false)
+                });
+                if target_matches && (event.kind.is_modify() || event.kind.is_create()) {
+                    let current_logno = *logno.lock().unwrap();
+                    println!("logwatch: file changed, current logno={}", current_logno);
+                    let ret = get_filelog_lastline(&current_logno.to_string(), &filename_clone);
+                    if let Some(newline_pos) = ret.find('\n') {
+                        if let Ok(new_logno) = ret[..newline_pos].trim().parse::<usize>() {
+                            *logno.lock().unwrap() = new_logno;
+                        }
+                    }
+                    let _ = app.emit_all("logrefresh", &ret);
+                }
+            },
+            Err(e) => println!("logwatch error: {:?}", e),
+        }
+    }).unwrap();
+
+    match watcher.watch(Path::new(&watch_dir), RecursiveMode::NonRecursive) {
+        Ok(_) => println!("logwatch: watching {}", watch_dir),
+        Err(e) => {
+            println!("logwatch: watch failed {:?}", e);
+            return;
+        }
+    }
+
+    s.watcher = Some(watcher);
+}
+
+#[tauri::command]
+fn stop_logwatch(state: tauri::State<'_, Mutex<LogWatchState>>) {
+    let mut s = state.lock().unwrap();
+    s.watcher = None;
+    *s.logno.lock().unwrap() = 0;
+    println!("logwatch: stopped");
 }
 
 fn main() {
@@ -188,7 +266,9 @@ fn main() {
             get_filelog,
             take_screenshot,
             get_imagelist,
-            get_eventvalue
+            get_eventvalue,
+            start_logwatch,
+            stop_logwatch
         ])
         .menu(menu)
         .on_menu_event(|event| {
@@ -209,32 +289,17 @@ fn main() {
             }
         })
         .setup(|app| {
+            app.manage(Mutex::new(LogWatchState {
+                watcher: None,
+                logno: Arc::new(Mutex::new(0)),
+            }));
+
             let app_handle = app.app_handle();
             std::thread::spawn(move || loop {
-                app_handle.emit_all("eventrefresh", get_eventvalue("", "", false)).unwrap();
+                let _ = app_handle.emit_all("eventrefresh", get_eventvalue("", "", false));
                 std::thread::sleep(std::time::Duration::from_secs(1));
             });
 
-            let app_handle = app.app_handle();
-            app.listen_global("logcheck", move |event| {
-                println!("TEST: {}", event.payload().unwrap());
-                let a: Vec<_> = event.payload().unwrap().split(",").collect();
-                let logno = a[0].replace("\\", "").replace("\"{\"lognoStr\":\"", "").replace("\"", "");
-                let filename = a[1].replace("\\", "").replace("\"filename\":\"", "").replace("\"}\"", "");
-                println!("logno: {}, filename: {}", logno, filename);
-                //let arg: HashMap<&str, &str> = serde_json::from_str(event.payload().unwrap()).unwrap();
-                //println!("logcheck1: {:?}", arg);
-                std::thread::sleep(std::time::Duration::from_secs(1));
-                //println!("logcheck2: {:?}", arg);
-                //println!("logno: {}, filename: {}", logno, filename);
-                app_handle.emit_all("logrefresh", get_filelog_lastline(&logno, &filename)).unwrap();
-            });
-            //app.manage(EventIdValue(eid.to_owned().to_string()));
-            //app.listen_global("logcheck-stop", move |event| {
-            //    println!("logcheck-stop eid: {}", eid);
-            //    main_window.unlisten(eid);
-            //});
-            
             Ok(())
         })
         .system_tray(SystemTray::new().with_menu(tray_menu))
@@ -299,15 +364,26 @@ fn get_currentpath() -> String {
 //    return String::from("R:\\test");
 }
 
+
 fn check_version(win: &tauri::Window) {
-    let response = DefaultHttpRequest::get_from_url_str("http://www.plasmasphere.net/archives/umaumalogger/api/version.txt").unwrap().send();
     let mut checker = String::from("");
 
-    match response {
-        Ok(r) => {
-            checker = String::from_utf8(r.body).unwrap();
+    match reqwest::blocking::Client::builder()
+        .timeout(Duration::from_secs(5))
+        .build() {
+        Ok(client) => {
+            match client.get("http://www.plasmasphere.net/archives/umaumalogger/api/version.txt").send() {
+                Ok(response) => {
+                    if let Ok(text) = response.text() {
+                        checker = text;
+                    }
+                },
+                Err(_e) => {
+                    checker = "0".to_string();
+                }
+            }
         },
-        Err(_e) => {
+        Err(_) => {
             checker = "0".to_string();
         }
     }
@@ -331,4 +407,3 @@ fn check_version(win: &tauri::Window) {
         dialog::message(Some(&win), &package.name, "最新バージョンです。");
     }
 }
-

@@ -85,6 +85,17 @@
     let cmd = new Command('umalog', [
       path + "\\out\\" + filename
     ]);
+
+/*    cmd.on('close', (data) => {
+      iid = false;
+      process = null;
+      logno = "0";
+      startStats = "";
+      stopStats = "disabled";
+      //get_loglists();
+      addMsg("ロギングが完了しました");
+    });*/
+
     process = await cmd.spawn();
     addMsg("ロギングを開始しました。プロセスは " + process.pid + " です");
     startStats = "disabled";
@@ -100,7 +111,8 @@
     listen('logrefresh', function(ret) {
       log_refresh(ret.payload);
     });
-    emit('logcheck', { lognoStr: String(logno), filename: filename });
+    invoke('start_logwatch', { filename });
+    //emit('logcheck', { lognoStr: String(logno), filename: filename });
     iid = true;
   }
 
@@ -130,11 +142,11 @@
 
         for(let i = 1, size = parse.length; i < size; i++) {
           addMsg(parse[i].replace("\t", ", "));
-          
+
           if(String(parse[i]).indexOf('育成完了') !== -1) {
             let tid;
             tid = setTimeout(function() {
-              stopLog();
+              //stopLog();
               get_loglists();
               clearTimeout(tid);
             }, 3000);
@@ -146,21 +158,22 @@
       }
     }
 
-    if(iid) {
-      emit('logcheck', { lognoStr: String(logno), filename: filename });
-    }
+    //if(iid) {
+    //  emit('logcheck', { lognoStr: String(logno), filename: filename });
+    //}
   }
 
   async function stopLog(silent) {
 //    clearInterval(iid);
     iid = false;
+    invoke('stop_logwatch');
     let cmd = new Command('taskkill', ["/im", "umalog.exe", "/f"]);
     process = await cmd.spawn();
     process = false;
     logno = "0";
     startStats = "";
     stopStats = "disabled";
-    
+
     if(silent == true ) { return; }
 
     addMsg("ロギングを停止しました");
@@ -591,7 +604,7 @@
 
   <div class="ikusei_subchart">
       <div>
-          <PolarArea 
+          <PolarArea
               data={chartResult}
               options={{
                 maintainAspectRatio: false,
@@ -612,7 +625,7 @@
       </div>
 
       <div>
-          <Bar 
+          <Bar
               data={chartYaruki}
               options={{
                 maintainAspectRatio: false,

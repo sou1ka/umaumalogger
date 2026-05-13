@@ -20,8 +20,9 @@ tauri = { version = "1.4", features = ["api-all", "system-tray"] }
 chrono = "0.4.23"
 image = "0.23.14"
 urlencoding = "2.1.2"
-easy-http-request = "0.2.13"
-winrt = "0.7.0"
+reqwest = { version = "0.13.3", features = ["blocking"] }
+notify = "6.1"
+winrt = "0.8.0"
 
 [dependencies.windows]
 version = "0.38.0"
