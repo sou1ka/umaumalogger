@@ -130,7 +130,10 @@ header>div>button:first-of-type {
 
 .console ul {
   margin: 0;
-  padding: 0;
+  padding: 10px;
+  background-color: #ddd;
+  border-radius: 10px;
+  min-height: 90%;
 }
 
 .console li:before {
@@ -195,3 +198,16 @@ header>div>button:first-of-type {
   width: 100px;
 }
 
+.rotate {
+    animation: rotation 2.4s linear infinite;
+    vertical-align: middle;
+}
+
+@keyframes rotation {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}

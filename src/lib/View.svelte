@@ -24,6 +24,7 @@
   } from '@smui/data-table';
   import ImageList, { Item, Image } from '@smui/image-list';
   import Paper, { Title, Content } from '@smui/paper';
+  import { afterUpdate } from 'svelte';
 
   import { Line, PolarArea, Bar } from 'svelte-chartjs';
   import {
@@ -64,6 +65,7 @@
   let stopStats = "disabled";
   let canScreenshot = "";
   let page = 1;
+  let consoleEl;
 
   function getFilename() {
     let now = new Date();
@@ -78,6 +80,10 @@
     loggingMsg = tmp;
   }
 
+  afterUpdate(() => {
+    consoleEl?.scroll({ behavior: 'smooth', top: consoleEl.scrollHeight });
+  });
+
   async function startLog() {
     if(process) { return; }
 
@@ -86,15 +92,9 @@
       path + "\\out\\" + filename
     ]);
 
-/*    cmd.on('close', (data) => {
-      iid = false;
-      process = null;
-      logno = "0";
-      startStats = "";
-      stopStats = "disabled";
-      //get_loglists();
-      addMsg("ロギングが完了しました");
-    });*/
+    cmd.on('close', (data) => {
+      stopLog();
+    });
 
     process = await cmd.spawn();
     addMsg("ロギングを開始しました。プロセスは " + process.pid + " です");
@@ -142,16 +142,6 @@
 
         for(let i = 1, size = parse.length; i < size; i++) {
           addMsg(parse[i].replace("\t", ", "));
-
-          if(String(parse[i]).indexOf('育成完了') !== -1) {
-            let tid;
-            tid = setTimeout(function() {
-              //stopLog();
-              get_loglists();
-              clearTimeout(tid);
-            }, 3000);
-            break;
-          }
         }
 
         drowChart(filename);
@@ -173,6 +163,7 @@
     logno = "0";
     startStats = "";
     stopStats = "disabled";
+    get_loglists();
 
     if(silent == true ) { return; }
 
@@ -284,7 +275,7 @@
 
   // グラフ初期値
 
-  let maxScale = 1600;
+  let maxScale = 2000;
 
   let chartIkusei = {
     labels: ['ジュニア級テビュー前'],
@@ -439,7 +430,8 @@
       borderColor: '#424242',
       backgroundColor: '#BDBDBD',
       pointStyle: 'circle',
-      pointHoverRadius: 10
+      pointHoverRadius: 10,
+      hidden: true
     }];
 
     if(JSON.stringify(ikuseiVal) != JSON.stringify(chartIkusei.datasets)) {
@@ -547,11 +539,14 @@
     </TabBar>
 
     {#if active == 'Console'}
-      <div class="console">
+      <div class="console" bind:this={consoleEl}>
         <ul>
         {#each loggingMsg as msg}
           <li>{msg}</li>
         {/each}
+        {#if process != false}
+            <li><img src="/128x128.png" alt="|" width="14" class="rotate" /></li>
+        {/if}
         </ul>
       </div>
     {:else if active == 'Logs' }
@@ -573,8 +568,8 @@
         <Body>
           {#each items as item }
             <Row>
-              <Cell on:click={() => drowChart(item.filename)}>{item.filename}</Cell>
-              <Cell on:click={() => drowChart(item.filename)}>{item.create_date}</Cell>
+              <Cell on:click={() => {drowChart(item.filename);addMsg(item.filename + 'を読み込みました')}}>{item.filename}</Cell>
+              <Cell on:click={() => {drowChart(item.filename);addMsg(item.filename + 'を読み込みました')}}>{item.create_date}</Cell>
             </Row>
           {/each}
         </Body>
