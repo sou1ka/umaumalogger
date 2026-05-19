@@ -3,19 +3,24 @@
     windows_subsystem = "windows"
 )]
 
-use tauri::api::{dialog, shell};
-use tauri::{CustomMenuItem, Menu, MenuItem, Submenu, Manager, SystemTray, SystemTrayMenu, SystemTrayMenuItem, SystemTrayEvent, WindowMenuEvent, Window};
+use tauri::{
+    menu::{Menu, MenuItem, PredefinedMenuItem, IsMenuItem, Submenu, MenuEvent},
+    tray::{TrayIconBuilder, TrayIconEvent},
+    WebviewWindow, Manager, Emitter,
+};
+use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
+use tauri_plugin_shell::ShellExt;
 
+use chrono::Utc;
+use notify::{RecursiveMode, Watcher};
+use std::collections::HashMap;
 use std::env;
-use std::io;
 use std::fs;
+use std::io;
 use std::os::windows::fs::MetadataExt;
 use std::path::Path;
-use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use std::time::{SystemTime, Duration};
-use notify::{Watcher, RecursiveMode};
-use chrono::Utc;
+use std::time::{Duration, SystemTime};
 
 mod screenshot;
 
@@ -37,9 +42,9 @@ fn get_filelog_lastline(logno_str: &str, filename: &str) -> String {
 
     if Path::new(&path).exists() {
         let dat = fs::read_to_string(path).expect("not read file.");
-        let dats:Vec<&str> = dat.trim().lines().collect();
+        let dats: Vec<&str> = dat.trim().lines().collect();
         let linecount = dats.len();
-        let logno:usize = logno_str.parse().unwrap();//println!("linecount {}, logno {}", linecount, logno);
+        let logno: usize = logno_str.parse().unwrap(); //println!("linecount {}, logno {}", linecount, logno);
         ret += &linecount.to_string();
         ret += "\n";
         if logno < linecount {
@@ -56,14 +61,17 @@ fn get_filelog_lastline(logno_str: &str, filename: &str) -> String {
 #[tauri::command]
 fn get_loglists() -> String {
     let path = &format!("{}\\out\\", get_currentpath());
-    let lists: Vec<String> = read_dir(path).unwrap();
+    let lists: Vec<String> = read_dir(path).unwrap_or_default();
     let mut arr: Vec<String> = Vec::new();
 
     for item in lists {
         let meta = fs::metadata(path.to_string() + &item).unwrap();
         let mut line: HashMap<&str, String> = HashMap::new();
         line.insert("filename", item);
-        line.insert("create_timestamp", (meta.creation_time() / 10000000 - 11644473600).to_string());
+        line.insert(
+            "create_timestamp",
+            (meta.creation_time() / 10000000 - 11644473600).to_string(),
+        );
         let serialized: String = serde_json::to_string(&line).unwrap();
         arr.push(serialized);
     }
@@ -99,7 +107,7 @@ fn take_screenshot() -> String {
 #[tauri::command]
 fn get_imagelist(page: usize, num: usize) -> String {
     let path: &str = &format!("{}\\screenshot\\", get_currentpath());
-    let mut lists: Vec<String> = read_dir(path).unwrap();
+    let mut lists: Vec<String> = read_dir(path).unwrap_or_default();
     lists.reverse();
     let size = lists.len();
     let mut arr: Vec<String> = Vec::new();
@@ -108,7 +116,9 @@ fn get_imagelist(page: usize, num: usize) -> String {
     let start: usize = if num == 0 { limit - base } else { 0 };
 
     for i in start..limit {
-        if size <= i.into() { break; }
+        if size <= i.into() {
+            break;
+        }
 
         let item = &lists[i];
         let mut line: HashMap<&str, String> = HashMap::new();
@@ -127,13 +137,22 @@ fn get_eventvalue(musumename: &str, eventname: &str, force: bool) -> String {
     let exists = Path::new(&path).exists();
 
     if force || exists {
-        let mut now:u64 = 0;
-        let mut modify:u64 = 0;
+        let mut now: u64 = 0;
+        let mut modify: u64 = 0;
 
-        if exists{
-            now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs()-1;
+        if exists {
+            now = SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+                - 1;
             let meta = fs::metadata(&path).unwrap();
-            modify = meta.modified().unwrap().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
+            modify = meta
+                .modified()
+                .unwrap()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
         }
 
         if force || now <= modify {
@@ -151,19 +170,18 @@ fn get_eventvalue(musumename: &str, eventname: &str, force: bool) -> String {
                 );
                 match reqwest::blocking::Client::builder()
                     .timeout(Duration::from_secs(5))
-                    .build() {
-                    Ok(client) => {
-                        match client.get(&url).send() {
-                            Ok(response) => {
-                                if response.status() == 200 {
-                                    if let Ok(text) = response.text() {
-                                        ret = text;
-                                    }
+                    .build()
+                {
+                    Ok(client) => match client.get(&url).send() {
+                        Ok(response) => {
+                            if response.status() == 200 {
+                                if let Ok(text) = response.text() {
+                                    ret = text;
                                 }
-                            },
-                            Err(_e) => {
-                                ret = String::from("");
                             }
+                        }
+                        Err(_e) => {
+                            ret = String::from("");
                         }
                     },
                     Err(_) => {
@@ -178,7 +196,11 @@ fn get_eventvalue(musumename: &str, eventname: &str, force: bool) -> String {
 }
 
 #[tauri::command]
-fn start_logwatch(filename: String, state: tauri::State<'_, Mutex<LogWatchState>>, app_handle: tauri::AppHandle) {
+fn start_logwatch(
+    filename: String,
+    state: tauri::State<'_, Mutex<LogWatchState>>,
+    app_handle: tauri::AppHandle,
+) {
     let mut s = state.lock().unwrap();
     s.watcher = None;
     *s.logno.lock().unwrap() = 0;
@@ -190,8 +212,8 @@ fn start_logwatch(filename: String, state: tauri::State<'_, Mutex<LogWatchState>
 
     let _ = std::fs::create_dir_all(&watch_dir);
 
-    let mut watcher = notify::recommended_watcher(move |res: notify::Result<notify::Event>| {
-        match res {
+    let mut watcher =
+        notify::recommended_watcher(move |res: notify::Result<notify::Event>| match res {
             Ok(event) => {
                 let target_matches = event.paths.iter().any(|p| {
                     p.file_name()
@@ -208,12 +230,12 @@ fn start_logwatch(filename: String, state: tauri::State<'_, Mutex<LogWatchState>
                             *logno.lock().unwrap() = new_logno;
                         }
                     }
-                    let _ = app.emit_all("logrefresh", &ret);
+                    let _ = app.emit("logrefresh", &ret);
                 }
-            },
+            }
             Err(e) => println!("logwatch error: {:?}", e),
-        }
-    }).unwrap();
+        })
+        .unwrap();
 
     match watcher.watch(Path::new(&watch_dir), RecursiveMode::NonRecursive) {
         Ok(_) => println!("logwatch: watching {}", watch_dir),
@@ -235,29 +257,16 @@ fn stop_logwatch(state: tauri::State<'_, Mutex<LogWatchState>>) {
 }
 
 fn main() {
-    let exit = CustomMenuItem::new("exit".to_string(), "終了");
-    let check = CustomMenuItem::new("check".to_string(), "更新をチェック");
-    let version = CustomMenuItem::new("vers".to_string(), "バージョン情報");
-    let filemenu = Submenu::new("ファイル", Menu::new().add_item(exit.clone()));
-    let helpmenu = Submenu::new("ヘルプ", Menu::new().add_item(check.clone()).add_native_item(MenuItem::Separator).add_item(version));
-    let menu = Menu::new()
-        .add_submenu(filemenu)
-        .add_submenu(helpmenu);
-
-    let shot = CustomMenuItem::new("shot".to_string(), "スクリーンショット");
-    let show = CustomMenuItem::new("show".to_string(), "表示");
-    let hide = CustomMenuItem::new("hide".to_string(), "隠す");
-    let tray_menu = SystemTrayMenu::new()
-        .add_item(shot)
-        .add_native_item(SystemTrayMenuItem::Separator)
-        .add_item(check.clone())
-        .add_native_item(SystemTrayMenuItem::Separator)
-        .add_item(show)
-        .add_item(hide)
-        .add_native_item(SystemTrayMenuItem::Separator)
-        .add_item(exit.clone());
-
     tauri::Builder::default()
+        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_os::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_http::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
         .invoke_handler(tauri::generate_handler![
             filelogging,
             get_filelog_lastline,
@@ -270,76 +279,111 @@ fn main() {
             start_logwatch,
             stop_logwatch
         ])
-        .menu(menu)
-        .on_menu_event(|event| {
-            match event.menu_item_id() {
-                "exit" => {
-                    std::process::exit(0);
-                }
-                "check" => {
-                    check_version(event.window());
-                }
-                "vers" => {
-                    let context = tauri::generate_context!();
-                    let package = context.package_info();
-                    let msg: String = format!("UmaUmaLogger\r\n\r\nVersion {}\n\rAuthor: sou1ka @sou1ka", package.version);
-                    dialog::message(Some(&event.window()), &package.name, &msg);
-                }
-                _ => {}
-            }
-        })
         .setup(|app| {
             app.manage(Mutex::new(LogWatchState {
                 watcher: None,
                 logno: Arc::new(Mutex::new(0)),
             }));
 
-            let app_handle = app.app_handle();
+            let app_handle = app.handle().clone();
             std::thread::spawn(move || loop {
-                let _ = app_handle.emit_all("eventrefresh", get_eventvalue("", "", false));
+                let _ = app_handle.emit("eventrefresh", get_eventvalue("", "", false));
                 std::thread::sleep(std::time::Duration::from_secs(1));
             });
 
-            Ok(())
-        })
-        .system_tray(SystemTray::new().with_menu(tray_menu))
-        .on_system_tray_event(|app, event| match event {
-            SystemTrayEvent::DoubleClick {
-                position: _,
-                size: _,
-                ..
-            } => {
-                let window = app.get_window("main").unwrap();
-                window.unminimize().unwrap();
-                window.show().unwrap();
-                window.set_focus().unwrap();
-            }
-            SystemTrayEvent::MenuItemClick { id, .. } => {
-              match id.as_str() {
-                "show" => {
-                    let window = app.get_window("main").unwrap();
-                    window.unminimize().unwrap();
-                    window.show().unwrap();
-                    window.set_focus().unwrap();
-                }
-                "shot" => {
-                    let _ = &take_screenshot();
-                }
-                "check" => {
-                    check_version(&app.get_window("main").unwrap());
-                }
-                "hide" => {
-                    let window = app.get_window("main").unwrap();
-                    window.hide().unwrap();
-                }
+            // ツールバーメニュー、システムトレイメニュー
+            let exit = MenuItem::with_id(app, "exit", "終了", true, None::<&str>)?;
+            let check = MenuItem::with_id(app, "check", "更新をチェック", true, None::<&str>)?;
+            let sep = PredefinedMenuItem::separator(app)?;
+            let version = MenuItem::with_id(app, "vers", "バージョン情報", true, None::<&str>)?;
+            let tool_menu = Menu::with_items(app, &[
+                &Submenu::with_items(app, "ファイル", true, &[&exit])?,
+                &Submenu::with_items(app, "ヘルプ", true, &[
+                    &check as &dyn IsMenuItem<_>,
+                    &sep as &dyn IsMenuItem<_>,
+                    &version as &dyn IsMenuItem<_>
+                ])?
+            ])?;
+            app.set_menu(tool_menu)?;
+            app.on_menu_event(|app, event| match event.id().as_ref() {
                 "exit" => {
                     std::process::exit(0);
                 }
+                "check" => {
+                    if let Some(win) = app.get_webview_window("main") {
+                        check_version(win);
+                    }
+                }
+                "vers" => {
+                    let package = app.package_info();
+                    let msg: String = format!(
+                        "UmaUmaLogger\r\n\r\nVersion {}\n\rAuthor: sou1ka @sou1ka",
+                        package.version
+                    );
+                    if let Some(win) = app.get_webview_window("main") {
+                        win.dialog()
+                            .message(&msg)
+                            .title(&package.name)
+                            .blocking_show();
+                    }
+
+                }
                 _ => {}
-              }
-            }
-            _ => {}
-          })
+            });
+
+            let shot = MenuItem::with_id(app, "shot", "スクリーンショット", true, None::<&str>)?;
+            let show = MenuItem::with_id(app, "show", "表示", true, None::<&str>)?;
+            let hide = MenuItem::with_id(app, "hide", "隠す", true, None::<&str>)?;
+            let tray_menu = Menu::with_items(app, &[
+                    &shot,
+                    &sep,
+                    &check,
+                    &sep,
+                    &show,
+                    &hide,
+                    &sep,
+                    &exit
+                ]
+            )?;
+
+            TrayIconBuilder::new()
+                .menu(&tray_menu)
+                .icon(app.default_window_icon().unwrap().clone())
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::DoubleClick { .. } = event {
+                        let app = tray.app_handle();
+                        if let Some(window) = app.get_webview_window("main") {
+                            window.unminimize().unwrap();
+                            window.show().unwrap();
+                            window.set_focus().unwrap();
+                        }
+                    }
+                })
+                .on_menu_event(|app, event| {
+                    match event.id.as_ref() {
+                        "show" => {
+                            let window = app.get_webview_window("main").unwrap();
+                            window.unminimize().unwrap();
+                            window.show().unwrap();
+                            window.set_focus().unwrap();
+                        }
+                        "shot" => {
+                            let _ = &take_screenshot();
+                        }
+                        "hide" => {
+                            let window = app.get_webview_window("main").unwrap();
+                            window.hide().unwrap();
+                        }
+                        "exit" => {
+                            std::process::exit(0);
+                        }
+                        _ => {}
+                    }
+                })
+                .build(app)?;
+
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -361,49 +405,57 @@ fn get_currentpath() -> String {
     let cd = env::current_dir().unwrap();
 
     return cd.to_string_lossy().to_string();
-//    return String::from("R:\\test");
+    //    return String::from("R:\\test");
 }
 
-
-fn check_version(win: &tauri::Window) {
+fn check_version(win: tauri::WebviewWindow) {
     let mut checker = String::from("");
 
     match reqwest::blocking::Client::builder()
         .timeout(Duration::from_secs(5))
-        .build() {
+        .build()
+    {
         Ok(client) => {
-            match client.get("http://www.plasmasphere.net/archives/umaumalogger/api/version.txt").send() {
+            match client
+                .get("http://www.plasmasphere.net/archives/umaumalogger/api/version.txt")
+                .send()
+            {
                 Ok(response) => {
                     if let Ok(text) = response.text() {
                         checker = text;
                     }
-                },
+                }
                 Err(_e) => {
                     checker = "0".to_string();
                 }
             }
-        },
+        }
         Err(_) => {
             checker = "0".to_string();
         }
     }
 
-    let context = tauri::generate_context!();
-    let package = context.package_info();
+    let package = win.package_info();
     let ver = package.version.to_string();
 
     if checker == "0" {
-        dialog::message(Some(&win), &package.name, "更新チェックに失敗しました。");
-
-    } else if ver != checker {
-        let scope = win.shell_scope();
-        dialog::ask(Some(&win), &package.name, "新しいバージョンがあります。ダウンロードしますか？", move |answer| {
-            if answer {
-                shell::open(&scope, "http://www.plasmasphere.net/archives/umaumalogger/", None).unwrap();
-            }
-        });
+        win.dialog().message("更新チェックに失敗しました。").title(&package.name).blocking_show();
+    } else if ver < checker {
+        win.dialog()
+            .message("新しいバージョンがあります。ダウンロードしますか？")
+            .title(&package.name)
+            .buttons(MessageDialogButtons::OkCancel)
+            .show(move |answer| {
+                if answer {
+                    win.shell().open(
+                        "http://www.plasmasphere.net/archives/umaumalogger/",
+                        None,
+                    )
+                    .unwrap();
+                }
+            });
 
     } else {
-        dialog::message(Some(&win), &package.name, "最新バージョンです。");
+        win.dialog().message("最新バージョンです。").title(&package.name).blocking_show();
     }
 }

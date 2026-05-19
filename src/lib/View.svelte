@@ -6,9 +6,9 @@
       document.querySelectorAll('.ikusei_subchart canvas')[1].style.width = width + 'px';
   }
 
-  import { invoke } from "@tauri-apps/api/tauri"
-  import { Command } from '@tauri-apps/api/shell'
-  import { convertFileSrc } from '@tauri-apps/api/tauri';
+  import { invoke } from "@tauri-apps/api/core"
+  import { Command } from '@tauri-apps/plugin-shell'
+  import { convertFileSrc } from '@tauri-apps/api/core';
   import { listen, emit } from '@tauri-apps/api/event';
 
   import Button, { Group, Label, Icon } from '@smui/button';
@@ -88,7 +88,7 @@
     if(process) { return; }
 
     let path = await invoke("get_path");
-    let cmd = new Command('umalog', [
+    let cmd = Command.create('umalog', [
       path + "\\out\\" + filename
     ]);
 
@@ -157,7 +157,7 @@
 //    clearInterval(iid);
     iid = false;
     invoke('stop_logwatch');
-    let cmd = new Command('taskkill', ["/im", "umalog.exe", "/f"]);
+    let cmd = Command.create('taskkill', ["/im", "umalog.exe", "/f"]);
     process = await cmd.spawn();
     process = false;
     logno = "0";
@@ -205,9 +205,10 @@
 
   async function imageview(img) {
     let path = await invoke("get_path");
-    let cmd = new Command('view', ["/c", "start", path + "\\screenshot\\" + img]);
+    let cmd = Command.create('view', ["/c", "start", path + "\\screenshot\\" + img]);
     cmd.spawn();
   }
+
 
   let imagelist = [];
   async function get_imagelist(page, num) {
@@ -241,7 +242,7 @@
 
   async function show_screenshotdir() {
     let path = await invoke("get_path");
-    let cmd = new Command('view', ["/c", "start", "explorer", path + "\\screenshot\\"]);
+    let cmd = Command.create('view', ["/c", "start", "explorer", path + "\\screenshot\\"]);
     cmd.spawn();
   }
 
@@ -506,7 +507,7 @@
       <Tooltip>ロギングを開始します</Tooltip>
     </Wrapper>
     <Wrapper>
-      <Button on:click={stopLog} disabled="{stopStats}">
+      <Button on:click={() => {stopLog(true)}} disabled="{stopStats}">
         <Icon class="fa-solid fa-stop"></Icon>
       </Button>
       <Tooltip>ロギングを停止します</Tooltip>
@@ -661,7 +662,7 @@
     {#each imagelist as img, i}
       <Item on:click={imageview(img.filename)}>
         <Image
-          src="{convertFileSrc("screenshot/" + img.filename)}"
+            src="{convertFileSrc('screenshot/' + img.filename)}"
         />
       </Item>
     {/each}

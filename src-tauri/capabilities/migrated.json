@@ -1,0 +1,34 @@
+{
+  "identifier": "migrated",
+  "description": "permissions that were migrated from v1",
+  "local": true,
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "shell:allow-open",
+    "dialog:allow-message",
+    "dialog:allow-ask",
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [
+        {
+          "name": "umalog",
+          "cmd": "umalog.exe",
+          "args": true
+        },
+        {
+          "name": "taskkill",
+          "cmd": "taskkill",
+          "args": true
+        },
+        {
+          "name": "view",
+          "cmd": "cmd",
+          "args": true
+        }
+      ]
+    }
+  ]
+}
